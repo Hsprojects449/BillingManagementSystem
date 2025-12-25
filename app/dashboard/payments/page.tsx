@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 import { PaymentsPageClient } from "./payments-page-client"
+import { Suspense } from "react"
+import { LoadingOverlay } from "@/components/loading-overlay"
 
 export default async function PaymentsPage() {
   const supabase = await createClient()
@@ -57,7 +59,9 @@ export default async function PaymentsPage() {
         </Button>
       </div>
 
-      <PaymentsPageClient clients={clients || []} payments={payments || []} clientInvoices={clientInvoices} />
+      <Suspense fallback={<LoadingOverlay />}>
+        <PaymentsPageClient clients={clients || []} payments={payments || []} clientInvoices={clientInvoices} />
+      </Suspense>
     </div>
   )
 }

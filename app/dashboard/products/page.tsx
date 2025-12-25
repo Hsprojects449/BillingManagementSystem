@@ -3,14 +3,21 @@ import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 import { ProductsTable } from "@/components/products-table"
+import { Suspense } from "react"
+import { LoadingOverlay } from "@/components/loading-overlay"
 
-export default async function ProductsPage() {
+async function ProductsContent() {
   const supabase = await createClient()
 
   const { data: products } = await supabase
     .from("products")
     .select("*, profiles!products_created_by_fkey(full_name)")
     .order("created_at", { ascending: false })
+
+  return <ProductsTable products={products || []} />
+}
+
+export default async function ProductsPage() {
 
   return (
     <div className="p-6 lg:p-8">
@@ -27,7 +34,9 @@ export default async function ProductsPage() {
         </Button>
       </div>
 
-      <ProductsTable products={products || []} />
+      <Suspense fallback={<LoadingOverlay />}>
+        <ProductsContent />
+      </Suspense>
     </div>
   )
 }

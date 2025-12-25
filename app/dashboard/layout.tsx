@@ -2,6 +2,7 @@ import type React from "react"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { DashboardNav } from "@/components/dashboard-nav"
+import { Suspense } from "react"
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -34,7 +35,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="flex min-h-screen bg-slate-50">
       <DashboardNav profile={profile} />
-      <main className="flex-1 overflow-auto">{children}</main>
+      <main className="flex-1 overflow-auto">
+        <Suspense 
+          fallback={
+            <div className="w-full h-full bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100" 
+              style={{
+                animation: 'shimmerContent 2s infinite',
+                backgroundSize: '200% 100%'
+              }}
+            />
+          }
+        >
+          {children}
+        </Suspense>
+      </main>
     </div>
   )
 }

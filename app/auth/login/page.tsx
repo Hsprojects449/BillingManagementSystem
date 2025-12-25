@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
+import { LoadingOverlay } from "@/components/loading-overlay"
 import { useToast } from "@/hooks/use-toast"
 import { Eye, EyeOff } from "lucide-react"
 import Image from "next/image"
@@ -46,41 +47,43 @@ export default function LoginPage() {
         description: "You have successfully signed in.",
       })
       
-      // Redirect based on role
+      // Redirect based on role - spinner will stay visible during navigation
       if (profile?.role === "accountant") {
         router.push("/dashboard/clients")
       } else {
         // Admin and manager go to dashboard
         router.push("/dashboard")
       }
-      router.refresh()
+      // Note: setIsLoading(false) is intentionally not called here
+      // The spinner will remain visible until the page fully loads
     } catch (error: unknown) {
+      setIsLoading(false)
       toast({
         variant: "destructive",
         title: "Sign in failed",
         description: error instanceof Error ? error.message : "Invalid email or password",
       })
-    } finally {
-      setIsLoading(false)
     }
   }
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Loading Spinner Overlay */}
+      {isLoading && <LoadingOverlay />}
       <div className="w-full max-w-sm">
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col items-center gap-3 text-center">
+        <div className="flex flex-col gap-8">
+          <div className="flex flex-col items-center gap-4">
             <Image
-              src="/BS%20Logo.jpeg"
+              src="/BS_Logo-removebg-preview.png"
               alt="Billing Management System logo"
-              width={56}
-              height={56}
-              className="h-14 w-14 rounded-xl object-cover shadow-sm"
+              width={64}
+              height={64}
+              className="h-16 w-16 object-contain drop-shadow-lg"
               priority
             />
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Invoice Pro</h1>
-              <p className="text-sm text-muted-foreground mt-1">Professional billing management</p>
+            <div className="text-center">
+              <h1 className="text-4xl font-bold tracking-tight text-slate-900">Invoice Pro</h1>
+              <p className="text-sm text-slate-600 mt-2">Professional billing management</p>
             </div>
           </div>
           <Card className="border-slate-200 shadow-lg">

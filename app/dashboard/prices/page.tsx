@@ -2,11 +2,12 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { PricesTable } from "@/components/prices-table"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 import { PricesPageClient } from "@/app/dashboard/prices/prices-page-client"
+import { Suspense } from "react"
+import { LoadingOverlay } from "@/components/loading-overlay"
 
 export default async function PricesPage() {
   const supabase = await createClient()
@@ -65,10 +66,12 @@ export default async function PricesPage() {
         </div>
       </div>
 
-      <PricesPageClient 
-        priceCategories={priceCategories || []} 
-        priceHistory={priceHistory || []} 
-      />
+      <Suspense fallback={<LoadingOverlay />}>
+        <PricesPageClient 
+          priceCategories={priceCategories || []} 
+          priceHistory={priceHistory || []} 
+        />
+      </Suspense>
     </div>
   )
 }

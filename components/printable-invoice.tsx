@@ -204,16 +204,16 @@ export function PrintableInvoice({ invoice, template }: PrintableInvoiceProps) {
                 <span>Subtotal:</span>
                 <span>₹{Number(invoice.subtotal).toFixed(2)}</span>
               </div>
+              <div className="flex justify-between py-1">
+                <span>{activeTemplate.tax_label}:</span>
+                <span>₹{Number(invoice.tax_amount).toFixed(2)}</span>
+              </div>
               {Number(invoice.discount_amount) > 0 && (
                 <div className="flex justify-between py-1 text-green-600">
                   <span>Discount:</span>
                   <span>-₹{Number(invoice.discount_amount).toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between py-1">
-                <span>{activeTemplate.tax_label}:</span>
-                <span>₹{Number(invoice.tax_amount).toFixed(2)}</span>
-              </div>
               <div className="flex justify-between py-2 font-bold text-lg border-t-2 border-gray-300">
                 <span>Total:</span>
                 <span>₹{Number(invoice.total_amount).toFixed(2)}</span>

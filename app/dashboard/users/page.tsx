@@ -4,6 +4,19 @@ import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 import { UsersTable } from "@/components/users-table"
+import { Suspense } from "react"
+import { LoadingOverlay } from "@/components/loading-overlay"
+
+async function UsersContent({ userRole }: { userRole: string }) {
+  const supabase = await createClient()
+
+  const { data: users } = await supabase
+    .from("profiles")
+    .select("*, organizations(name)")
+    .order("created_at", { ascending: false })
+
+  return <UsersTable users={users || []} userRole={userRole} />
+}
 
 export default async function UsersPage() {
   const supabase = await createClient()
@@ -22,12 +35,6 @@ export default async function UsersPage() {
   if (!profile || (profile.role !== "admin" && profile.role !== "manager")) {
     redirect("/dashboard")
   }
-
-  // Get all users with their organizations
-  const { data: users } = await supabase
-    .from("profiles")
-    .select("*, organizations(name)")
-    .order("created_at", { ascending: false })
 
   const userRole = profile.role
 
@@ -48,7 +55,9 @@ export default async function UsersPage() {
         )}
       </div>
 
-      <UsersTable users={users || []} userRole={userRole} />
+      <Suspense fallback={<LoadingOverlay />}>
+        <UsersContent userRole={userRole} />
+      </Suspense>
     </div>
   )
 }

@@ -76,6 +76,9 @@ export function PaymentForm({ invoices, clients = [], preSelectedInvoiceId, preS
       const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
       const cashRef = `CASH-${timestamp}-${randomNum}`
       setFormData((prev) => ({ ...prev, reference_number: cashRef }))
+    } else {
+      // Clear reference number when switching away from cash
+      setFormData((prev) => ({ ...prev, reference_number: "" }))
     }
   }, [formData.payment_method])
 

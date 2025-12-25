@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 import { ClientPricingPageClient } from "./client-pricing-page-client"
+import { Suspense } from "react"
+import { LoadingOverlay } from "@/components/loading-overlay"
 
 export default async function ClientPricingPage() {
   const supabase = await createClient()
@@ -61,12 +63,14 @@ export default async function ClientPricingPage() {
         )}
       </div>
 
-      <ClientPricingPageClient
-        pricingRules={pricingRules || []}
-        priceHistory={priceHistory || []}
-        clients={clients || []}
-        userRole={profile.role}
-      />
+      <Suspense fallback={<LoadingOverlay />}>
+        <ClientPricingPageClient
+          pricingRules={pricingRules || []}
+          priceHistory={priceHistory || []}
+          clients={clients || []}
+          userRole={profile.role}
+        />
+      </Suspense>
     </div>
   )
 }

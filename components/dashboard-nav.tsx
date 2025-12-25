@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import Image from "next/image"
+import { useTransition } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
@@ -40,9 +41,9 @@ export function DashboardNav({ profile }: DashboardNavProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { toast } = useToast()
+  const [isPending, startTransition] = useTransition()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
-  const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
 
   const handleSignOut = async () => {
     setIsSigningOut(true)
@@ -68,10 +69,10 @@ export function DashboardNav({ profile }: DashboardNavProps) {
   }
 
   const handleNavigation = (href: string) => {
-    setNavigatingTo(href)
     setIsMobileMenuOpen(false)
-    // Reset loading state after navigation
-    setTimeout(() => setNavigatingTo(null), 300)
+    startTransition(() => {
+      router.push(href)
+    })
   }
 
   const getNavItemsForRole = (role: string | undefined) => {
@@ -147,19 +148,20 @@ export function DashboardNav({ profile }: DashboardNavProps) {
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))
-            const isLoading = navigatingTo === item.href
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => handleNavigation(item.href)}
+                onClick={(e) => {
+                  e.preventDefault()
+                  handleNavigation(item.href)
+                }}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors relative",
                   isActive ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
-                  isLoading && "opacity-70",
                 )}
               >
-                {isLoading ? <Spinner className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+                <Icon className="h-5 w-5" />
                 {item.label}
               </Link>
             )
@@ -178,6 +180,8 @@ export function DashboardNav({ profile }: DashboardNavProps) {
       {isMobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setIsMobileMenuOpen(false)} />
       )}
+
+
     </>
   )
 }

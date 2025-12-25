@@ -2,8 +2,9 @@ import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
-import { InvoicesTable } from "@/components/invoices-table"
 import { InvoicesPageClient } from "./invoices-page-client"
+import { Suspense } from "react"
+import { LoadingOverlay } from "@/components/loading-overlay"
 
 export default async function InvoicesPage() {
   const supabase = await createClient()
@@ -40,7 +41,9 @@ export default async function InvoicesPage() {
         </Button>
       </div>
 
-      <InvoicesPageClient clients={clients || []} invoices={invoices || []} />
+      <Suspense fallback={<LoadingOverlay />}>
+        <InvoicesPageClient clients={clients || []} invoices={invoices || []}/>
+      </Suspense>
     </div>
   )
 }

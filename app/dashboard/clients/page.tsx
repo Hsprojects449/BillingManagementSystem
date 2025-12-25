@@ -3,11 +3,23 @@ import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 import { ClientsTable } from "@/components/clients-table"
+import { Suspense } from "react"
+import { LoadingOverlay } from "@/components/loading-overlay"
+
+async function ClientsContent() {
+  const supabase = await createClient()
+
+  const { data: clients } = await supabase
+    .from("clients")
+    .select("*, profiles!clients_created_by_fkey(full_name)")
+    .order("created_at", { ascending: false })
+
+  return <ClientsTable clients={clients || []} />
+}
 
 export default async function ClientsPage() {
   const supabase = await createClient()
 
-  // Get user profile for role-based UI
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -17,11 +29,6 @@ export default async function ClientsPage() {
     .select("role")
     .eq("id", user?.id || "")
     .single()
-
-  const { data: clients } = await supabase
-    .from("clients")
-    .select("*, profiles!clients_created_by_fkey(full_name)")
-    .order("created_at", { ascending: false })
 
   const userRole = profile?.role || "accountant"
 
@@ -40,7 +47,9 @@ export default async function ClientsPage() {
         </Button>
       </div>
 
-  <ClientsTable clients={clients || []} />
+      <Suspense fallback={<LoadingOverlay />}>
+        <ClientsContent />
+      </Suspense>
     </div>
   )
 }

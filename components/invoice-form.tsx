@@ -94,26 +94,27 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
 
     const subtotal = initialItems.reduce((sum, item) => sum + Number(item.quantity) * Number(item.unit_price), 0)
 
+    // Calculate line taxes (on original unit price)
+    const line_tax_amount = initialItems.reduce((sum, item) => {
+      const itemSubtotal = Number(item.quantity) * Number(item.unit_price)
+      return sum + (itemSubtotal * Number(item.tax_rate)) / 100
+    }, 0)
+
+    // Subtotal with taxes
+    const subtotal_with_taxes = subtotal + line_tax_amount
+
+    // Calculate line discounts
     const line_discount_amount = initialItems.reduce(
       (sum, item) => sum + (Number(item.quantity) * Number(item.unit_price) * Number(item.discount)) / 100,
       0,
     )
 
-    const after_line_discount = subtotal - line_discount_amount
-
-    const line_tax_amount = initialItems.reduce((sum, item) => {
-      const itemSubtotal = Number(item.quantity) * Number(item.unit_price)
-      const itemDiscount = (itemSubtotal * Number(item.discount)) / 100
-      const itemAfterDiscount = itemSubtotal - itemDiscount
-      return sum + (itemAfterDiscount * Number(item.tax_rate)) / 100
-    }, 0)
-
+    // Invoice-level amounts
     const invoice_discount_amount = Math.max(0, (initialInvoice.discount_amount || 0) - line_discount_amount)
-    const after_all_discounts = after_line_discount - invoice_discount_amount
     const invoice_tax_amount = Math.max(0, (initialInvoice.tax_amount || 0) - line_tax_amount)
 
-    const discount_percent = after_line_discount > 0 ? (invoice_discount_amount / after_line_discount) * 100 : 0
-    const tax_percent = after_all_discounts > 0 ? (invoice_tax_amount / after_all_discounts) * 100 : 0
+    const discount_percent = subtotal > 0 ? (invoice_discount_amount / subtotal) * 100 : 0
+    const tax_percent = subtotal > 0 ? (invoice_tax_amount / subtotal) * 100 : 0
 
     return {
       discount_percent: Number.isFinite(discount_percent) ? discount_percent : 0,
@@ -190,9 +191,6 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
     const product = products.find((p) => p.id === productId)
     if (!product) return 0
 
-    const clientAdjustment = getClientAdjustment(clientId)
-    const perBirdAdjustment = applyPerBird ? clientAdjustment * Math.max(1, birdCount) : 0
-
     // Check if there's a client-specific pricing rule
     if (clientId) {
       const pricingRule = clientPricingRules.find(
@@ -223,17 +221,15 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
             priced = basePrice
         }
 
-        const adjusted = priced + perBirdAdjustment
-        return Math.max(0, adjusted)
+        return Math.max(0, priced)
       }
     }
 
-    // No client-specific rule, use default unit_price with per-bird adjustment if enabled
-    const adjusted = Number(product.unit_price) + perBirdAdjustment
-    return Math.max(0, adjusted)
+    // No client-specific rule, use default unit_price
+    return Math.max(0, Number(product.unit_price))
   }
 
-  // Build a human-friendly breakdown of pricing steps
+  // Build a human-friendly breakdown of pricing steps (unit price only, per-bird applied to line total)
   const getPriceBreakdown = (
     productId: string,
     clientId: string,
@@ -286,8 +282,9 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
       }
     }
 
+    // Per-bird adjustment is now applied to line total, not unit price
     const birdAdj = applyPerBird ? perBirdValue * safeBirds : 0
-    const finalPrice = Math.max(0, afterRule + birdAdj)
+    const finalPrice = afterRule
 
     return {
       basePrice,
@@ -347,39 +344,54 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
   })
 
   // Calculate line total for each item
+  // Order: Subtotal → Add Tax → Apply Discount → Add Per-bird
   const calculateLineTotal = (item: InvoiceItem) => {
     const subtotal = item.quantity * item.unit_price
+    const taxAmount = (subtotal * item.tax_rate) / 100
+    const afterTax = subtotal + taxAmount
     const discountAmount = (subtotal * item.discount) / 100
-    const afterDiscount = subtotal - discountAmount
-    const taxAmount = (afterDiscount * item.tax_rate) / 100
-    return afterDiscount + taxAmount
+    const afterDiscount = afterTax - discountAmount
+    
+    // Apply per-bird adjustment to the overall price (after quantity, tax, and discount)
+    if (item.use_per_bird) {
+      const clientAdjustment = formData.client_id ? getClientAdjustment(formData.client_id) : 0
+      const birdCount = Math.max(1, item.bird_count || 1)
+      const perBirdTotal = clientAdjustment * birdCount
+      return Math.max(0, afterDiscount + perBirdTotal)
+    }
+    
+    return Math.max(0, afterDiscount)
   }
 
   // Recalculate totals whenever items or invoice-level rates change
+  // Order: Subtotal → Add Tax → Apply Discount
   useEffect(() => {
     const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0)
 
+    // Calculate line-item taxes
+    const line_tax_amount = items.reduce((sum, item) => {
+      const itemSubtotal = item.quantity * item.unit_price
+      return sum + (itemSubtotal * item.tax_rate) / 100
+    }, 0)
+
+    // Add subtotal + line taxes
+    const subtotal_with_line_tax = subtotal + line_tax_amount
+
+    // Calculate and add invoice-level tax on subtotal
+    const invoice_tax_amount = (subtotal * (invoiceRates.tax_percent || 0)) / 100
+    const total_with_all_taxes = subtotal_with_line_tax + invoice_tax_amount
+
+    // Now apply discounts to the amount with taxes
     const line_discount_amount = items.reduce(
       (sum, item) => sum + (item.quantity * item.unit_price * item.discount) / 100,
       0,
     )
 
-    const after_line_discount = subtotal - line_discount_amount
-
-    const line_tax_amount = items.reduce((sum, item) => {
-      const itemSubtotal = item.quantity * item.unit_price
-      const itemDiscount = (itemSubtotal * item.discount) / 100
-      const itemAfterDiscount = itemSubtotal - itemDiscount
-      return sum + (itemAfterDiscount * item.tax_rate) / 100
-    }, 0)
-
-    const invoice_discount_amount = (after_line_discount * (invoiceRates.discount_percent || 0)) / 100
-    const after_all_discounts = after_line_discount - invoice_discount_amount
-    const invoice_tax_amount = (after_all_discounts * (invoiceRates.tax_percent || 0)) / 100
-
+    const invoice_discount_amount = (subtotal * (invoiceRates.discount_percent || 0)) / 100
     const discount_amount = line_discount_amount + invoice_discount_amount
+
+    const total_amount = total_with_all_taxes - discount_amount
     const tax_amount = line_tax_amount + invoice_tax_amount
-    const total_amount = after_all_discounts + tax_amount
 
     setTotals({
       subtotal,
@@ -770,13 +782,13 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
                             </div>
                           )}
                           {item?.use_per_bird && (
-                            <div>
-                              <span className="font-medium">Birds:</span> +₹{breakdown.birdAdj.toFixed(2)}
+                            <div className="text-amber-600 font-medium">
+                              Per-bird applied to line total: +₹{breakdown.birdAdj.toFixed(2)}
                               {" "}({`₹${breakdown.perBirdValue.toFixed(2)}`} × {breakdown.birdCount})
                             </div>
                           )}
                           <div>
-                            <span className="font-medium">Final:</span> ₹{breakdown.finalPrice.toFixed(2)}
+                            <span className="font-medium">Unit Price:</span> ₹{breakdown.finalPrice.toFixed(2)}
                           </div>
                         </div>
                       )}
@@ -908,12 +920,12 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
               <span className="font-medium">₹{totals.subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Discount:</span>
-              <span className="font-medium text-red-600">-₹{totals.discount_amount.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Tax:</span>
               <span className="font-medium">₹{totals.tax_amount.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Discount:</span>
+              <span className="font-medium text-red-600">-₹{totals.discount_amount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-lg font-bold border-t pt-2">
               <span>Total:</span>

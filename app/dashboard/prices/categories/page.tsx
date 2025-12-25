@@ -3,6 +3,20 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { CategoriesManagement } from "@/components/categories-management"
+import { Suspense } from "react"
+import { LoadingOverlay } from "@/components/loading-overlay"
+
+async function CategoriesContent({ organizationId }: { organizationId: string }) {
+  const supabase = await createClient()
+
+  const { data: priceCategories } = await supabase
+    .from("price_categories")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .order("name", { ascending: true })
+
+  return <CategoriesManagement priceCategories={priceCategories || []} />
+}
 
 export default async function CategoriesPage() {
   const supabase = await createClient()
@@ -21,12 +35,6 @@ export default async function CategoriesPage() {
     redirect("/dashboard")
   }
 
-  const { data: priceCategories } = await supabase
-    .from("price_categories")
-    .select("*")
-    .eq("organization_id", profile.organization_id)
-    .order("name", { ascending: true })
-
   return (
     <div className="p-6 lg:p-8">
       <div className="space-y-6">
@@ -37,7 +45,9 @@ export default async function CategoriesPage() {
           </p>
         </div>
 
-        <CategoriesManagement priceCategories={priceCategories || []} />
+        <Suspense fallback={<LoadingOverlay />}>
+          <CategoriesContent organizationId={profile.organization_id} />
+        </Suspense>
       </div>
     </div>
   )
