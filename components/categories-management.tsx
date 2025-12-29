@@ -12,6 +12,16 @@ import { useToast } from "@/hooks/use-toast"
 import { Spinner } from "@/components/ui/spinner"
 import { Pencil, Trash2, Plus } from "lucide-react"
 import Link from "next/link"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface PriceCategory {
   id: string
@@ -33,6 +43,8 @@ export function CategoriesManagement({ priceCategories }: CategoriesManagementPr
     name: "",
     description: "",
   })
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<null | { id: string; name: string }>(null)
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -106,10 +118,6 @@ export function CategoriesManagement({ priceCategories }: CategoriesManagementPr
   }
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"? This will remove all price history for this category.`)) {
-      return
-    }
-
     setLoading(true)
     const supabase = createClient()
 
@@ -135,6 +143,7 @@ export function CategoriesManagement({ priceCategories }: CategoriesManagementPr
   }
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <Button
@@ -214,7 +223,10 @@ export function CategoriesManagement({ priceCategories }: CategoriesManagementPr
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleDelete(category.id, category.name)}
+                    onClick={() => {
+                      setPendingDelete({ id: category.id, name: category.name })
+                      setDeleteDialogOpen(true)
+                    }}
                     disabled={loading}
                   >
                     <Trash2 className="h-3 w-3 mr-1 text-red-600" />
@@ -237,5 +249,25 @@ export function CategoriesManagement({ priceCategories }: CategoriesManagementPr
         </div>
       )}
     </div>
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete category?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will remove the category and all its price history entries. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => pendingDelete && handleDelete(pendingDelete.id, pendingDelete.name)}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }

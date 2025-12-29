@@ -8,6 +8,16 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { useState, useMemo } from "react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { exportToCSV, ExportColumn, getTimestamp } from "@/lib/export-utils"
 import { Input } from "@/components/ui/input"
@@ -31,6 +41,8 @@ export function ProductsTable({ products }: ProductsTableProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [productToDelete, setProductToDelete] = useState<string | null>(null)
 
   // Sorting state
   const [sortColumn, setSortColumn] = useState<string | null>(null)
@@ -229,9 +241,8 @@ export function ProductsTable({ products }: ProductsTableProps) {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        if (confirm("Are you sure you want to delete this product?")) {
-                          handleDelete(product.id)
-                        }
+                        setProductToDelete(product.id)
+                        setDeleteDialogOpen(true)
                       }}
                     >
                       <Trash2 className="h-4 w-4 text-red-600" />
@@ -244,6 +255,26 @@ export function ProductsTable({ products }: ProductsTableProps) {
         </Table>
       </div>
 
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete product?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the product.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => productToDelete && handleDelete(productToDelete)}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

@@ -7,7 +7,17 @@ import { Trash2, Download, ArrowUpDown, ArrowUp, ArrowDown, Eye } from "lucide-r
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { useState, useMemo } from "react"
+import { useState, useMemo, ReactNode } from "react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { exportToCSV, ExportColumn, getTimestamp } from "@/lib/export-utils"
 import { Input } from "@/components/ui/input"
@@ -33,6 +43,7 @@ interface Payment {
 
 interface PaymentsTableProps {
   payments: Payment[]
+  toolbarLeft?: ReactNode
 }
 
 const statusConfig = {
@@ -42,10 +53,12 @@ const statusConfig = {
   refunded: { label: "Refunded", className: "bg-slate-100 text-slate-800" },
 }
 
-export function PaymentsTable({ payments }: PaymentsTableProps) {
+export function PaymentsTable({ payments, toolbarLeft }: PaymentsTableProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null)
 
   // Sorting state
   const [sortColumn, setSortColumn] = useState<string | null>(null)
@@ -207,7 +220,10 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
 
   return (
     <>
-      <div className="flex justify-end items-center mb-4">
+      <div className="flex items-end justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          {toolbarLeft}
+        </div>
         <Button onClick={handleExport} size="sm" variant="outline" title="Export to CSV">
           <Download className="h-4 w-4" />
         </Button>
@@ -312,9 +328,8 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          if (confirm("Are you sure you want to delete this payment?")) {
-                            handleDelete(payment.id)
-                          }
+                          setPaymentToDelete(payment.id)
+                          setDeleteDialogOpen(true)
                         }}
                       >
                         <Trash2 className="h-4 w-4 text-red-600" />
@@ -328,6 +343,26 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
         </Table>
       </div>
 
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete payment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the payment.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => paymentToDelete && handleDelete(paymentToDelete)}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { DashboardPageWrapper } from "@/components/dashboard-page-wrapper"
 import { SettingsForm } from "@/components/settings-form"
 import { InvoiceTemplateForm } from "@/components/invoice-template-form"
 
@@ -44,48 +45,49 @@ export default async function SettingsPage() {
     .single()
 
   return (
-    <div className="lg:p-8 space-y-6">
-      <div className="px-6 pb-2">
-        <h1 className="text-2xl font-semibold text-slate-900">System Settings</h1>
+    <DashboardPageWrapper title="System Settings">
+      <div className="lg:p-8 space-y-6">
         {isManagerViewOnly && (
-          <p className="text-sm text-amber-700 mt-2">View-only access. Contact an admin to make changes.</p>
+          <div className="px-6 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm text-amber-700">View-only access. Contact an admin to make changes.</p>
+          </div>
         )}
+
+        <div className="grid gap-6 px-6">
+          <Card className={isManagerViewOnly ? "pointer-events-none opacity-60" : ""}>
+            <CardHeader>
+              <CardTitle>Organization Settings</CardTitle>
+              <CardDescription>Configure your organization details and preferences</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SettingsForm organization={organization} />
+            </CardContent>
+          </Card>
+
+          <Card className={isManagerViewOnly ? "pointer-events-none opacity-60" : ""}>
+            <CardHeader>
+              <CardTitle>Tax Configuration</CardTitle>
+              <CardDescription>Set default tax rates and rules</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-slate-500">
+                Default tax rates are configured per product. You can set organization-wide defaults here in future
+                updates.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className={isManagerViewOnly ? "pointer-events-none opacity-60" : ""}>
+            <CardHeader>
+              <CardTitle>Invoice Template</CardTitle>
+              <CardDescription>Customize invoice appearance and branding</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {await InvoiceTemplateSection({ organizationId: profile.organization_id })}
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      <div className="grid gap-6 px-6">
-        <Card className={isManagerViewOnly ? "pointer-events-none opacity-60" : ""}>
-          <CardHeader>
-            <CardTitle>Organization Settings</CardTitle>
-            <CardDescription>Configure your organization details and preferences</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SettingsForm organization={organization} />
-          </CardContent>
-        </Card>
-
-        <Card className={isManagerViewOnly ? "pointer-events-none opacity-60" : ""}>
-          <CardHeader>
-            <CardTitle>Tax Configuration</CardTitle>
-            <CardDescription>Set default tax rates and rules</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-slate-500">
-              Default tax rates are configured per product. You can set organization-wide defaults here in future
-              updates.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className={isManagerViewOnly ? "pointer-events-none opacity-60" : ""}>
-          <CardHeader>
-            <CardTitle>Invoice Template</CardTitle>
-            <CardDescription>Customize invoice appearance and branding</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {await InvoiceTemplateSection({ organizationId: profile.organization_id })}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    </DashboardPageWrapper>
   )
 }

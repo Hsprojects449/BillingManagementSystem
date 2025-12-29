@@ -10,6 +10,16 @@ import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { Input } from "@/components/ui/input"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface User {
   id: string
@@ -24,6 +34,8 @@ interface User {
 export function UsersTable({ users, userRole }: { users: User[]; userRole?: string }) {
   const router = useRouter()
   const { toast } = useToast()
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<null | { id: string; name: string }>(null)
 
   // Sorting state
   const [sortColumn, setSortColumn] = useState<string | null>(null)
@@ -122,25 +134,46 @@ export function UsersTable({ users, userRole }: { users: User[]; userRole?: stri
   }
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
-      return
-    }
-
-    const supabase = createClient()
-    const { error } = await supabase.from("profiles").update({ is_active: false }).eq("id", id)
-
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Error deactivating user: " + error.message,
+    try {
+      console.log('Deactivating user:', { id, name })
+      
+      const res = await fetch("/api/users/deactivate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
       })
-    } else {
+
+      console.log('Deactivate response status:', res.status)
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        console.error('Deactivate failed:', data)
+        throw new Error(data?.error || "Failed to deactivate user")
+      }
+
+      const result = await res.json()
+      console.log('Deactivate result:', result)
+
+      setDeleteDialogOpen(false)
+      setUserToDelete(null)
+      
       toast({
         title: "User deactivated",
         description: "The user has been deactivated successfully.",
       })
-      router.refresh()
+      
+      // Wait a moment for database transaction to complete, then force full reload
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      console.log('Forcing page reload')
+      window.location.reload()
+    } catch (err: unknown) {
+      console.error('Deactivate error:', err)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err instanceof Error ? err.message : "Error deactivating user",
+      })
     }
   }
 
@@ -160,6 +193,7 @@ export function UsersTable({ users, userRole }: { users: User[]; userRole?: stri
   }
 
   return (
+    <>
     <div className="bg-white rounded-lg border border-slate-200">
       <Table>
         <TableHeader>
@@ -245,7 +279,10 @@ export function UsersTable({ users, userRole }: { users: User[]; userRole?: stri
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(user.id, user.full_name)}
+                        onClick={() => {
+                          setUserToDelete({ id: user.id, name: user.full_name })
+                          setDeleteDialogOpen(true)
+                        }}
                         className="text-red-600 hover:text-red-700"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -259,5 +296,25 @@ export function UsersTable({ users, userRole }: { users: User[]; userRole?: stri
         </TableBody>
       </Table>
     </div>
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Deactivate user?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This action will deactivate the user account. They will no longer be able to sign in.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => userToDelete && handleDelete(userToDelete.id, userToDelete.name)}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            Deactivate
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }

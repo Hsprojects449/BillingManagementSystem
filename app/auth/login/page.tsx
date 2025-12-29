@@ -34,13 +34,26 @@ export default function LoginPage() {
         email,
         password,
       })
-      if (error) throw error
+      if (error) {
+        // Check if user is banned/deactivated
+        if (error.message.toLowerCase().includes("user is banned") || 
+            error.message.toLowerCase().includes("email not confirmed")) {
+          throw new Error("Your account has been deactivated. Contact your administrator.")
+        }
+        throw error
+      }
       
-      // Get user profile to determine redirect based on role
+      // Get user profile to determine redirect based on role and active state
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, is_active")
         .single()
+
+      // If user is deactivated, immediately sign out and block access
+      if (profile && profile.is_active === false) {
+        await supabase.auth.signOut()
+        throw new Error("Your account has been deactivated. Contact your administrator.")
+      }
       
       toast({
         title: "Welcome back!",

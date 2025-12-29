@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 import { ClientPricingPageClient } from "./client-pricing-page-client"
+import { DashboardPageWrapper } from "@/components/dashboard-page-wrapper"
 import { Suspense } from "react"
 import { LoadingOverlay } from "@/components/loading-overlay"
 
@@ -47,20 +48,20 @@ export default async function ClientPricingPage() {
     .select("price_category_id, price, effective_date")
 
   return (
-    <div className="lg:p-8">
-      <div className="px-6 pb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">Client-Specific Pricing</h1>
-        <div className="flex items-center gap-2">
-          {profile.role === "super_admin" && (
-            <Button asChild>
-              <Link href="/dashboard/client-pricing/new">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Pricing Rule
-              </Link>
-            </Button>
-          )}
+    <DashboardPageWrapper title="Client-Specific Pricing">
+      <div className="lg:p-8">
+        <div className="px-6 pb-4 flex items-center justify-end">
+          <div className="flex items-center gap-2">
+            {profile.role === "super_admin" && (
+              <Button asChild>
+                <Link href="/dashboard/client-pricing/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Pricing Rule
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
 
         <Suspense fallback={<LoadingOverlay />}>
           <div className="px-6">
@@ -72,6 +73,7 @@ export default async function ClientPricingPage() {
             />
           </div>
         </Suspense>
-    </div>
+      </div>
+    </DashboardPageWrapper>
   )
 }

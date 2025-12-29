@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { sendClientInvitation } from "@/app/actions/send-client-invitation"
 
 interface Client {
   id: string
@@ -55,13 +56,14 @@ export function ClientForm({ client }: ClientFormProps) {
   })
 
   const handlePincodeChange = async (pincode: string) => {
-    setFormData({ ...formData, zip_code: pincode })
+    const digitsOnly = pincode.replace(/\D/g, "").slice(0, 6)
+    setFormData({ ...formData, zip_code: digitsOnly })
 
     // Only fetch if pincode is 6 digits (Indian pincode format)
-    if (pincode.length === 6 && /^\d{6}$/.test(pincode)) {
+    if (digitsOnly.length === 6 && /^\d{6}$/.test(digitsOnly)) {
       setFetchingPincode(true)
       try {
-        const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`)
+        const response = await fetch(`https://api.postalpincode.in/pincode/${digitsOnly}`)
         const data = await response.json()
         
         if (data[0]?.Status === "Success" && data[0]?.PostOffice?.length > 0) {
@@ -91,6 +93,11 @@ export function ClientForm({ client }: ClientFormProps) {
     "UAE",
     "Other",
   ]
+
+  const handlePhoneChange = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, "").slice(0, 10)
+    setFormData((prev) => ({ ...prev, phone: digitsOnly }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -166,6 +173,14 @@ export function ClientForm({ client }: ClientFormProps) {
 
         if (error) throw error
         
+        // Send invitation email to new client
+        const emailResult = await sendClientInvitation(formData.email, formData.name)
+        
+        if (!emailResult.success) {
+          console.error("Failed to send client invitation email:", emailResult.error)
+          // Don't fail the client creation, just log the error
+        }
+        
         toast({
           title: "Client created",
           description: `${formData.name} has been added successfully.`,
@@ -234,9 +249,12 @@ export function ClientForm({ client }: ClientFormProps) {
               <Input
                 id="phone"
                 type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={10}
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+91 98765 43210"
+                onChange={(e) => handlePhoneChange(e.target.value)}
+                placeholder="00000 00000"
               />
             </div>
 
@@ -301,7 +319,9 @@ export function ClientForm({ client }: ClientFormProps) {
                   id="zip_code"
                   value={formData.zip_code}
                   onChange={(e) => handlePincodeChange(e.target.value)}
-                  placeholder="400001"
+                  placeholder="6-digit pincode"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   maxLength={6}
                   disabled={fetchingPincode}
                 />

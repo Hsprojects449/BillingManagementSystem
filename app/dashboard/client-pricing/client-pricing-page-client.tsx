@@ -37,8 +37,14 @@ export function ClientPricingPageClient({ pricingRules, priceHistory, clients, u
 
   return (
     <div className="space-y-4">
-      <ClientSelector clients={clients} selectedClientId={selectedClientId} onClientChange={setSelectedClientId} />
-      <ClientPricingTable pricingRules={filteredRules} priceHistory={priceHistory} userRole={userRole} />
+      <ClientPricingTable
+        pricingRules={filteredRules}
+        priceHistory={priceHistory}
+        userRole={userRole}
+        toolbarLeft={(
+          <ClientSelector clients={clients} selectedClientId={selectedClientId} onClientChange={setSelectedClientId} />
+        )}
+      />
     </div>
   )
 }

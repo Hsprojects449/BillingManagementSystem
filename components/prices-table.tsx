@@ -6,6 +6,16 @@ import { Pencil, Trash2, Download, ArrowUpDown, ArrowUp, ArrowDown } from "lucid
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { useState, useMemo } from "react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { exportToCSV, ExportColumn, getTimestamp } from "@/lib/export-utils"
@@ -36,6 +46,8 @@ export function PricesTable({ priceCategories, priceHistory }: PricesTableProps)
   const router = useRouter()
   const { toast } = useToast()
   const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<null | { id: string; type: 'category' | 'price' }>(null)
   const [filter, setFilter] = useState("")
   const [fromDate, setFromDate] = useState("")
   const [toDate, setToDate] = useState("")
@@ -60,6 +72,15 @@ export function PricesTable({ priceCategories, priceHistory }: PricesTableProps)
 
   const handleCategoryFilterChange = (column: string, value: string) => {
     setCategoryFilters(prev => ({ ...prev, [column]: value }))
+  }
+
+  const getLatestPrice = (categoryId: string, asOfDate?: string) => {
+    const filterDate = asOfDate || new Date().toISOString().split("T")[0]
+    const prices = priceHistory.filter(
+      (p) => p.price_category_id === categoryId && p.effective_date <= filterDate,
+    )
+    if (prices.length === 0) return null
+    return prices.sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())[0]
   }
 
   // Apply filtering and sorting to categories
@@ -108,15 +129,6 @@ export function PricesTable({ priceCategories, priceHistory }: PricesTableProps)
     return sortDirection === 'asc' 
       ? <ArrowUp className="ml-2 h-4 w-4 inline" />
       : <ArrowDown className="ml-2 h-4 w-4 inline" />
-  }
-
-  const getLatestPrice = (categoryId: string, asOfDate?: string) => {
-    const filterDate = asOfDate || new Date().toISOString().split("T")[0]
-    const prices = priceHistory.filter(
-      (p) => p.price_category_id === categoryId && p.effective_date <= filterDate,
-    )
-    if (prices.length === 0) return null
-    return prices.sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())[0]
   }
 
   const handleDelete = async (id: string, type: "category" | "price") => {
@@ -201,44 +213,6 @@ export function PricesTable({ priceCategories, priceHistory }: PricesTableProps)
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end gap-3 justify-between">
-        <div className="flex items-end gap-3">
-          <div>
-            <label className="text-sm font-medium block mb-1">Filter by Category</label>
-            <input
-              className="px-3 py-2 border rounded-md"
-              placeholder="Type category name to filter history"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            />
-          </div>
-          {priceHistory.length > 0 && (
-            <>
-              <div>
-                <label className="text-sm font-medium block mb-1">From date</label>
-                <input
-                  type="date"
-                  className="px-3 py-2 border rounded-md"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium block mb-1">To date</label>
-                <input
-                  type="date"
-                  className="px-3 py-2 border rounded-md"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                />
-              </div>
-            </>
-          )}
-        </div>
-        <Button onClick={handleExport} size="sm" variant="outline" title="Export to CSV">
-          <Download className="h-4 w-4" />
-        </Button>
-      </div>
       {/* Categories Table */}
       <div className="rounded-lg border bg-white overflow-hidden">
         <Table>
@@ -312,9 +286,8 @@ export function PricesTable({ priceCategories, priceHistory }: PricesTableProps)
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          if (confirm("Are you sure you want to delete this category?")) {
-                            handleDelete(category.id, "category")
-                          }
+                          setDeleteTarget({ id: category.id, type: 'category' })
+                          setDeleteDialogOpen(true)
                         }}
                         disabled={isDeleting}
                       >
@@ -331,7 +304,44 @@ export function PricesTable({ priceCategories, priceHistory }: PricesTableProps)
 
       {/* Price History Table */}
       {priceHistory.length > 0 && (
-        <div>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Price History</h3>
+          </div>
+          <div className="flex items-end gap-3 justify-between">
+            <div className="flex items-end gap-3">
+              <div>
+                <label className="text-sm font-medium block mb-1">Filter by Category</label>
+                <input
+                  className="px-3 py-2 border rounded-md"
+                  placeholder="Filter..."
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">From date</label>
+                <input
+                  type="date"
+                  className="px-3 py-2 border rounded-md"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">To date</label>
+                <input
+                  type="date"
+                  className="px-3 py-2 border rounded-md"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                />
+              </div>
+            </div>
+            <Button onClick={handleExport} size="sm" variant="outline" title="Export to CSV">
+              <Download className="h-4 w-4" />
+            </Button>
+          </div>
           <div className="rounded-lg border bg-white overflow-hidden">
             <Table>
               <TableHeader>
@@ -376,9 +386,8 @@ export function PricesTable({ priceCategories, priceHistory }: PricesTableProps)
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            if (confirm("Are you sure you want to delete this price update?")) {
-                              handleDelete(price.id, "price")
-                            }
+                            setDeleteTarget({ id: price.id, type: 'price' })
+                            setDeleteDialogOpen(true)
                           }}
                           disabled={isDeleting}
                         >
@@ -393,6 +402,27 @@ export function PricesTable({ priceCategories, priceHistory }: PricesTableProps)
           </div>
         </div>
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleteTarget?.type === 'category' ? 'category' : 'price update'}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. {deleteTarget?.type === 'category' ? 'This will remove the category and its history.' : 'This will remove this specific price entry.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteTarget && handleDelete(deleteTarget.id, deleteTarget.type)}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

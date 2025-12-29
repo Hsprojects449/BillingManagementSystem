@@ -100,7 +100,7 @@ export function DashboardClient({ clients, invoices }: DashboardClientProps) {
   })
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-6">
       <div className="flex items-center gap-4">
         <span className="text-sm font-medium text-muted-foreground">Select client:</span>
         <ClientSelector clients={clients} selectedClientId={selectedClientId} onClientChange={setSelectedClientId} />

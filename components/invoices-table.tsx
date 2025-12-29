@@ -9,7 +9,7 @@ import { Eye, Pencil, Trash2, Download, ArrowUpDown, ArrowUp, ArrowDown } from "
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { useState, useMemo } from "react"
+import { useState, useMemo, ReactNode } from "react"
 import { exportToCSV, ExportColumn, getTimestamp } from "@/lib/export-utils"
 import { Input } from "@/components/ui/input"
 import {
@@ -39,6 +39,7 @@ interface Invoice {
 
 interface InvoicesTableProps {
   invoices: Invoice[]
+  toolbarLeft?: ReactNode
 }
 
 const statusConfig = {
@@ -49,7 +50,7 @@ const statusConfig = {
   cancelled: { label: "Cancelled", className: "bg-slate-100 text-slate-800" },
 }
 
-export function InvoicesTable({ invoices }: InvoicesTableProps) {
+export function InvoicesTable({ invoices, toolbarLeft }: InvoicesTableProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -260,7 +261,10 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
 
   return (
     <>
-      <div className="flex justify-end items-center mb-4">
+      <div className="flex items-end justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          {toolbarLeft}
+        </div>
         <Button onClick={handleExport} size="sm" variant="outline" title="Export to CSV">
           <Download className="h-4 w-4" />
         </Button>

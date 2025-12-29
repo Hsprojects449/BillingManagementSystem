@@ -38,12 +38,15 @@ export function InvoicesPageClient({ clients, invoices }: InvoicesPageClientProp
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <span className="text-sm font-medium text-muted-foreground">Filter by client:</span>
-        <ClientSelector clients={clients} selectedClientId={selectedClientId} onClientChange={setSelectedClientId} />
-      </div>
-
-      <InvoicesTable invoices={filteredInvoices} />
+      <InvoicesTable
+        invoices={filteredInvoices}
+        toolbarLeft={(
+          <>
+            <span className="text-sm font-medium text-muted-foreground">Filter by client:</span>
+            <ClientSelector clients={clients} selectedClientId={selectedClientId} onClientChange={setSelectedClientId} />
+          </>
+        )}
+      />
     </div>
   )
 }

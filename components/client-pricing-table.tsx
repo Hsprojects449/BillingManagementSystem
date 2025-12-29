@@ -3,11 +3,21 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
+import { Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Download } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { useState, useMemo } from "react"
+import { useState, useMemo, ReactNode } from "react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { getPriceForCategoryOnDate } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
@@ -35,6 +45,7 @@ interface ClientPricingTableProps {
   pricingRules: PricingRule[]
   priceHistory?: Array<{ price_category_id: string; price: number; effective_date: string }>
   userRole?: string
+  toolbarLeft?: ReactNode
 }
 
 const ruleTypeLabels = {
@@ -43,10 +54,12 @@ const ruleTypeLabels = {
   multiplier: "Multiplier",
 }
 
-export function ClientPricingTable({ pricingRules, priceHistory = [], userRole }: ClientPricingTableProps) {
+export function ClientPricingTable({ pricingRules, priceHistory = [], userRole, toolbarLeft }: ClientPricingTableProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [ruleToDelete, setRuleToDelete] = useState<string | null>(null)
   const today = new Date().toISOString().split("T")[0]
 
   // Sorting state
@@ -59,6 +72,52 @@ export function ClientPricingTable({ pricingRules, priceHistory = [], userRole }
     product: '',
     category: '',
   })
+
+    const handleExport = () => {
+      const exportData = processedRules.map(rule => ({
+        'Client': rule.clients.name,
+        'Product': rule.products.name,
+        'Base Category': rule.price_categories?.name || '—',
+        'Category Price (Today)': rule.price_category_id 
+          ? getPriceForCategoryOnDate(rule.price_category_id, today, priceHistory)?.toFixed(2) || 'N/A'
+          : 'N/A',
+        'Rule Type': ruleTypeLabels[rule.price_rule_type as keyof typeof ruleTypeLabels],
+        'Rule Value': rule.price_rule_type === "discount_percentage" ? `${rule.price_rule_value}%` : rule.price_rule_type === "discount_flat" ? `₹${Number(rule.price_rule_value || 0).toFixed(2)}` : `× ${rule.price_rule_value}`,
+        'Final Price': `₹${calculateFinalPrice(rule).toFixed(2)}`,
+        'Notes': rule.notes || '',
+        'Created At': new Date(rule.created_at).toLocaleDateString(),
+      }))
+
+      const headers = Object.keys(exportData[0])
+      const csvContent = [
+        headers.join(','),
+        ...exportData.map(row =>
+          headers.map(header => {
+            const value = row[header as keyof typeof row]
+            // Escape quotes and wrap in quotes if contains comma
+            const stringValue = String(value || '')
+            return stringValue.includes(',') || stringValue.includes('"') 
+              ? `"${stringValue.replace(/"/g, '""')}"` 
+              : stringValue
+          }).join(',')
+        ),
+      ].join('\n')
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `pricing-rules-${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      toast({
+        title: 'Exported',
+        description: `${exportData.length} pricing rules exported to CSV successfully.`,
+      })
+    }
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -205,6 +264,14 @@ export function ClientPricingTable({ pricingRules, priceHistory = [], userRole }
 
   return (
     <>
+      <div className="flex items-end gap-3 justify-between mb-4">
+        <div className="flex items-center gap-3">
+          {toolbarLeft}
+        </div>
+        <Button onClick={handleExport} size="sm" variant="outline" title="Export to CSV">
+          <Download className="h-4 w-4" />
+        </Button>
+      </div>
       <div className="rounded-lg border bg-white">
         <Table>
           <TableHeader>
@@ -306,9 +373,8 @@ export function ClientPricingTable({ pricingRules, priceHistory = [], userRole }
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            if (confirm("Are you sure you want to delete this pricing rule?")) {
-                              handleDelete(rule.id)
-                            }
+                            setRuleToDelete(rule.id)
+                            setDeleteDialogOpen(true)
                           }}
                           disabled={isDeleting}
                         >
@@ -324,6 +390,26 @@ export function ClientPricingTable({ pricingRules, priceHistory = [], userRole }
         </Table>
       </div>
 
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete pricing rule?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this client pricing rule.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => ruleToDelete && handleDelete(ruleToDelete)}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

@@ -2,6 +2,9 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { UserForm } from "@/components/user-form"
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function EditUserPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient()
 

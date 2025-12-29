@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, FileText, DollarSign, TrendingUp } from "lucide-react"
 import { DashboardClient } from "./dashboard-client"
+import { DashboardPageWrapper } from "@/components/dashboard-page-wrapper"
 import { Suspense } from "react"
 import { LoadingOverlay } from "@/components/loading-overlay"
 
@@ -29,7 +30,7 @@ export default async function DashboardPage() {
   // Fetch summary statistics
   const [clientsResult, invoicesResult, paymentsResult, clientsListResult, invoicesListResult] = await Promise.all([
     supabase.from("clients").select("id", { count: "exact", head: true }),
-    supabase.from("invoices").select("id, total_amount, status", { count: "exact" }),
+    supabase.from("invoices").select("id, total_amount, amount_paid, status", { count: "exact" }),
     supabase.from("payments").select("amount"),
     supabase.from("clients").select("id, name").order("name", { ascending: true }),
     supabase.from("invoices").select(`
@@ -40,20 +41,22 @@ export default async function DashboardPage() {
 
   const totalClients = clientsResult.count || 0
   const totalInvoices = invoicesResult.count || 0
-  const paidInvoices = invoicesResult.data?.filter((inv) => inv.status === "paid").length || 0
+  // Paid invoices are those where amount_paid equals total_amount
+  const paidInvoices = invoicesResult.data?.filter((inv) => Number(inv.amount_paid) >= Number(inv.total_amount)).length || 0
   const totalRevenue =
     paymentsResult.data?.reduce((sum, payment) => sum + Number(payment.amount), 0).toFixed(2) || "0.00"
+  // Pending amount is the sum of (total_amount - amount_paid) for all invoices where there's still a balance
   const pendingAmount =
     invoicesResult.data
-      ?.filter((inv) => inv.status !== "paid" && inv.status !== "cancelled")
-      .reduce((sum, inv) => sum + Number(inv.total_amount), 0)
+      ?.reduce((sum, inv) => {
+        const balance = Number(inv.total_amount) - Number(inv.amount_paid)
+        return balance > 0 ? sum + balance : sum
+      }, 0)
       .toFixed(2) || "0.00"
 
   return (
-    <div className="lg:p-8">
-      <div className="px-6 pb-6">
-        <h1 className="text-2xl font-semibold text-slate-900">Dashboard Overview</h1>
-      </div>
+    <DashboardPageWrapper title="Dashboard Overview">
+      <div className="lg:p-8">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 px-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -107,6 +110,7 @@ export default async function DashboardPage() {
             <DashboardClient clients={clientsListResult.data || []} invoices={invoicesListResult.data || []} />
           </div>
         </Suspense>
-    </div>
+      </div>
+    </DashboardPageWrapper>
   )
 }

@@ -52,13 +52,27 @@ pnpm install
 
 ### 4. Configure Environment Variables
 
-Create a `.env.local` file in the root directory:
+Create a `.env.local` file in the root directory (see `.env.example` for reference):
 
 ```env
+# Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
-NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL=http://localhost:3000/dashboard
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+
+# Application URL
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Email Configuration (Resend)
+RESEND_API_KEY=re_your_resend_api_key
+EMAIL_FROM=your-verified-email@yourdomain.com
 ```
+
+**Email Setup (Required for notifications):**
+1. Sign up at [resend.com](https://resend.com)
+2. Get your API key from the [API Keys page](https://resend.com/api-keys)
+3. Verify your sending domain (or use `onboarding@resend.dev` for testing)
+4. Add the credentials to your `.env.local` file
 
 ### 5. Set Up the Database
 

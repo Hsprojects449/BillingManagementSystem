@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { DashboardPageWrapper } from "@/components/dashboard-page-wrapper"
 import { TrendingUp, DollarSign, FileText, Users, Clock, CheckCircle, AlertCircle } from "lucide-react"
 
 export default async function ReportsPage() {
@@ -96,10 +97,8 @@ export default async function ReportsPage() {
     .slice(0, 10)
 
   return (
-    <div className="lg:p-8">
-      <div className="px-6 pb-4">
-        <h1 className="text-2xl font-semibold text-slate-900">Reports &amp; Analytics</h1>
-      </div>
+    <DashboardPageWrapper title="Reports & Analytics">
+      <div className="lg:p-8">
         {/* Key Metrics */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8 px-6">
         <Card>
@@ -393,5 +392,6 @@ export default async function ReportsPage() {
         </CardContent>
       </Card>
     </div>
+    </DashboardPageWrapper>
   )
 }

@@ -116,7 +116,10 @@ export function PrintableInvoice({ invoice, template }: PrintableInvoiceProps) {
 
   return (
     <>
-      <div className="no-print mb-4 flex justify-end gap-2">
+      <div className="no-print mb-4 flex items-center justify-between gap-2">
+        <Button asChild variant="outline">
+          <a href="/dashboard/invoices">Back</a>
+        </Button>
         <Button onClick={handlePrint} disabled={isPrinting}>
           <Printer className="h-4 w-4 mr-2" />
           Print Invoice

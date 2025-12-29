@@ -74,10 +74,10 @@ interface InvoiceFormProps {
 interface InvoiceItem {
   product_id: string | null
   description: string
-  quantity: number
-  unit_price: number
-  tax_rate: number
-  discount: number
+  quantity: number | null
+  unit_price: number | null
+  tax_rate: number | null
+  discount: number | null
   line_total: number
   bird_count?: number
   enabled?: boolean
@@ -124,7 +124,9 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
     }
   }
 
-  const [invoiceRates, setInvoiceRates] = useState(deriveInvoiceRatesFromInitial)
+  const [invoiceRates, setInvoiceRates] = useState<{ discount_percent: number | null; tax_percent: number | null }>(
+    deriveInvoiceRatesFromInitial,
+  )
 
   const today = new Date().toISOString().split("T")[0]
   const defaultDue = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
@@ -364,10 +366,15 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
   // Calculate line total for each item
   // Order: Subtotal → Add Tax → Apply Discount → Add Per-bird
   const calculateLineTotal = (item: InvoiceItem) => {
-    const subtotal = item.quantity * item.unit_price
-    const taxAmount = (subtotal * item.tax_rate) / 100
+    const qty = Number(item.quantity || 0)
+    const unitPrice = Number(item.unit_price || 0)
+    const taxRate = Number(item.tax_rate || 0)
+    const discountRate = Number(item.discount || 0)
+
+    const subtotal = qty * unitPrice
+    const taxAmount = (subtotal * taxRate) / 100
     const afterTax = subtotal + taxAmount
-    const discountAmount = (subtotal * item.discount) / 100
+    const discountAmount = (subtotal * discountRate) / 100
     const afterDiscount = afterTax - discountAmount
     
     // Apply per-bird adjustment to the overall price (after quantity, tax, and discount)
@@ -388,25 +395,25 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
     const subtotalFromLineTotals = items.reduce((sum, item) => sum + item.line_total, 0)
     
     // For invoice-level rates, we still need the base subtotal (before line taxes/discounts/per-bird)
-    const baseSubtotal = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0)
+    const baseSubtotal = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0)
 
     // Calculate line-item taxes (already included in line_total)
     const line_tax_amount = items.reduce((sum, item) => {
-      const itemSubtotal = item.quantity * item.unit_price
-      return sum + (itemSubtotal * item.tax_rate) / 100
+      const itemSubtotal = Number(item.quantity || 0) * Number(item.unit_price || 0)
+      return sum + (itemSubtotal * Number(item.tax_rate || 0)) / 100
     }, 0)
 
     // Calculate line-item discounts (already included in line_total)
     const line_discount_amount = items.reduce(
-      (sum, item) => sum + (item.quantity * item.unit_price * item.discount) / 100,
+      (sum, item) => sum + (Number(item.quantity || 0) * Number(item.unit_price || 0) * Number(item.discount || 0)) / 100,
       0,
     )
 
     // Invoice-level tax on base subtotal
-    const invoice_tax_amount = (baseSubtotal * (invoiceRates.tax_percent || 0)) / 100
+    const invoice_tax_amount = (baseSubtotal * Number(invoiceRates.tax_percent || 0)) / 100
     
     // Invoice-level discount on base subtotal
-    const invoice_discount_amount = (baseSubtotal * (invoiceRates.discount_percent || 0)) / 100
+    const invoice_discount_amount = (baseSubtotal * Number(invoiceRates.discount_percent || 0)) / 100
 
     // Total starts with line totals (which include per-bird), then add/subtract invoice-level rates
     const total_amount = subtotalFromLineTotals + invoice_tax_amount - invoice_discount_amount
@@ -519,20 +526,22 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
     })
   }
 
-  const handleQuantityChange = (productId: string, value: number) => {
-    updateItem(productId, (item) => ({ ...item, quantity: value }))
+  const parseNullableNumber = (val: string) => (val === "" ? null : Number(val))
+
+  const handleQuantityChange = (productId: string, value: string) => {
+    updateItem(productId, (item) => ({ ...item, quantity: parseNullableNumber(value) }))
   }
 
-  const handleUnitPriceChange = (productId: string, value: number) => {
-    updateItem(productId, (item) => ({ ...item, unit_price: value }))
+  const handleUnitPriceChange = (productId: string, value: string) => {
+    updateItem(productId, (item) => ({ ...item, unit_price: parseNullableNumber(value) }))
   }
 
-  const handleTaxChange = (productId: string, value: number) => {
-    updateItem(productId, (item) => ({ ...item, tax_rate: value }))
+  const handleTaxChange = (productId: string, value: string) => {
+    updateItem(productId, (item) => ({ ...item, tax_rate: parseNullableNumber(value) }))
   }
 
-  const handleDiscountChange = (productId: string, value: number) => {
-    updateItem(productId, (item) => ({ ...item, discount: value }))
+  const handleDiscountChange = (productId: string, value: string) => {
+    updateItem(productId, (item) => ({ ...item, discount: parseNullableNumber(value) }))
   }
 
   const handleDescriptionChange = (productId: string, value: string) => {
@@ -1022,8 +1031,8 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
                           step="0.01"
                           min="0"
                           required
-                          value={item.quantity}
-                          onChange={(e) => handleQuantityChange(product.id, Number(e.target.value) || 0)}
+                          value={item.quantity ?? ""}
+                          onChange={(e) => handleQuantityChange(product.id, e.target.value)}
                         />
                       </div>
 
@@ -1034,8 +1043,8 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
                           step="0.01"
                           min="0"
                           required
-                          value={item.unit_price}
-                          onChange={(e) => handleUnitPriceChange(product.id, Number(e.target.value) || 0)}
+                          value={item.unit_price ?? ""}
+                          onChange={(e) => handleUnitPriceChange(product.id, e.target.value)}
                         />
                       </div>
 
@@ -1046,8 +1055,8 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
                           step="0.01"
                           min="0"
                           max="100"
-                          value={item.tax_rate}
-                          onChange={(e) => handleTaxChange(product.id, Number(e.target.value) || 0)}
+                          value={item.tax_rate ?? ""}
+                          onChange={(e) => handleTaxChange(product.id, e.target.value)}
                         />
                       </div>
 
@@ -1058,8 +1067,8 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
                           step="0.01"
                           min="0"
                           max="100"
-                          value={item.discount}
-                          onChange={(e) => handleDiscountChange(product.id, Number(e.target.value) || 0)}
+                          value={item.discount ?? ""}
+                          onChange={(e) => handleDiscountChange(product.id, e.target.value)}
                         />
                       </div>
 
@@ -1082,8 +1091,10 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
                 step="0.01"
                 min="0"
                 max="100"
-                value={invoiceRates.discount_percent}
-                onChange={(e) => setInvoiceRates((r) => ({ ...r, discount_percent: Number(e.target.value) || 0 }))}
+                value={invoiceRates.discount_percent ?? ""}
+                onChange={(e) =>
+                  setInvoiceRates((r) => ({ ...r, discount_percent: e.target.value === "" ? null : Number(e.target.value) }))
+                }
               />
             </div>
             <div className="space-y-2">
@@ -1093,8 +1104,10 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
                 step="0.01"
                 min="0"
                 max="100"
-                value={invoiceRates.tax_percent}
-                onChange={(e) => setInvoiceRates((r) => ({ ...r, tax_percent: Number(e.target.value) || 0 }))}
+                value={invoiceRates.tax_percent ?? ""}
+                onChange={(e) =>
+                  setInvoiceRates((r) => ({ ...r, tax_percent: e.target.value === "" ? null : Number(e.target.value) }))
+                }
               />
             </div>
           </div>

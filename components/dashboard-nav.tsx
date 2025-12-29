@@ -22,10 +22,10 @@ import {
   Briefcase,
   CreditCard,
   Tag,
+  ChevronLeft,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useState } from "react"
-import { NotificationBell } from "@/components/notification-bell"
 
 interface Profile {
   id: string
@@ -44,6 +44,7 @@ export function DashboardNav({ profile }: DashboardNavProps) {
   const { toast } = useToast()
   const [isPending, startTransition] = useTransition()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
 
   const handleSignOut = async () => {
@@ -137,29 +138,36 @@ export function DashboardNav({ profile }: DashboardNavProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 lg:h-screen",
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+          "fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40 bg-white border-r border-slate-200 flex flex-col transition-all duration-300 lg:h-screen",
+          isMobileMenuOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0",
+          !isSidebarCollapsed ? "lg:w-64" : "lg:w-20",
         )}
       >
-        <div className="p-6 border-b border-slate-200">
-          <div className="flex items-center gap-3">
+        <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+          <div className={cn("flex items-center gap-3 flex-1", isSidebarCollapsed && "lg:flex-col lg:items-center lg:gap-2")}>
             <Image
               src="/BS%20Logo.jpeg"
               alt="Billing Management System logo"
               width={44}
               height={44}
-              className="h-11 w-11 rounded-lg object-cover shadow-sm"
+              className="h-11 w-11 rounded-lg object-cover shadow-sm flex-shrink-0"
               priority
             />
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-bold text-slate-900 leading-tight">Invoice Pro</h1>
-              <p className="text-sm text-slate-500 mt-1 truncate">{profile?.full_name}</p>
-              <p className="text-xs text-slate-400 capitalize truncate">{profile?.role?.replace("_", " ")}</p>
-            </div>
-            <div className="flex-shrink-0 ml-2">
-              <NotificationBell userId={profile?.id || ""} />
-            </div>
+            {!isSidebarCollapsed && (
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl font-bold text-slate-900 leading-tight">Invoice Pro</h1>
+                <p className="text-sm text-slate-500 mt-1 truncate">{profile?.full_name}</p>
+                <p className="text-xs text-slate-400 capitalize truncate">{profile?.role?.replace("_", " ")}</p>
+              </div>
+            )}
           </div>
+          <button
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="hidden lg:flex items-center justify-center p-2 hover:bg-slate-100 rounded-md transition-colors ml-2 flex-shrink-0"
+            title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <ChevronLeft className={cn("h-5 w-5 text-slate-600 transition-transform", isSidebarCollapsed && "rotate-180")} />
+          </button>
         </div>
 
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -175,12 +183,19 @@ export function DashboardNav({ profile }: DashboardNavProps) {
                   handleNavigation(item.href)
                 }}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors relative",
+                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors relative group",
+                  isSidebarCollapsed && "lg:justify-center",
                   isActive ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
                 )}
+                title={isSidebarCollapsed ? item.label : ""}
               >
-                <Icon className="h-5 w-5" />
-                {item.label}
+                <Icon className="h-5 w-5 flex-shrink-0" />
+                {!isSidebarCollapsed && <span>{item.label}</span>}
+                {isSidebarCollapsed && (
+                  <div className="hidden group-hover:block absolute left-full ml-2 px-2 py-1 bg-slate-900 text-white text-xs rounded whitespace-nowrap">
+                    {item.label}
+                  </div>
+                )}
               </Link>
             )
           })}

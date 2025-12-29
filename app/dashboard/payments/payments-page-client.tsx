@@ -79,11 +79,6 @@ export function PaymentsPageClient({ clients, payments, clientInvoices = {} }: P
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <span className="text-sm font-medium text-muted-foreground">Filter by client:</span>
-        <ClientSelector clients={clients} selectedClientId={selectedClientId} onClientChange={setSelectedClientId} />
-      </div>
-
       {selectedClientId && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Client Invoices Summary */}
@@ -146,9 +141,15 @@ export function PaymentsPageClient({ clients, payments, clientInvoices = {} }: P
         </div>
       )}
 
-      <div className="space-y-4">
-        <PaymentsTable payments={filteredPayments} />
-      </div>
+      <PaymentsTable
+        payments={filteredPayments}
+        toolbarLeft={(
+          <>
+            <span className="text-sm font-medium text-muted-foreground">Filter by client:</span>
+            <ClientSelector clients={clients} selectedClientId={selectedClientId} onClientChange={setSelectedClientId} />
+          </>
+        )}
+      />
     </div>
   )
 }

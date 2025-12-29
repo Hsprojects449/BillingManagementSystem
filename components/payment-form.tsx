@@ -47,6 +47,7 @@ export function PaymentForm({ invoices, clients = [], preSelectedInvoiceId, preS
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [selectedClientId, setSelectedClientId] = useState<string | null>(preSelectedClientId || null)
   const [paymentMode, setPaymentMode] = useState<"individual" | "bulk">(preSelectedInvoiceId ? "individual" : "bulk")
+  const [autoFilledInvoiceId, setAutoFilledInvoiceId] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     invoice_id: preSelectedInvoiceId || "",
@@ -88,13 +89,14 @@ export function PaymentForm({ invoices, clients = [], preSelectedInvoiceId, preS
       const invoice = invoices.find((inv) => inv.id === formData.invoice_id)
       setSelectedInvoice(invoice || null)
 
-      // Auto-fill amount with remaining balance if empty
-      if (invoice && !formData.amount) {
+      // Auto-fill only once per invoice selection if the field is empty; allow clearing thereafter
+      if (invoice && formData.amount === "" && autoFilledInvoiceId !== formData.invoice_id) {
         const balance = Number(invoice.total_amount) - Number(invoice.amount_paid)
         setFormData((prev) => ({ ...prev, amount: balance.toFixed(2) }))
+        setAutoFilledInvoiceId(formData.invoice_id)
       }
     }
-  }, [formData.invoice_id, invoices, formData.amount])
+  }, [formData.invoice_id, invoices, formData.amount, autoFilledInvoiceId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -164,11 +166,12 @@ export function PaymentForm({ invoices, clients = [], preSelectedInvoiceId, preS
 
           const newAmountPaid = Number(invoice.amount_paid) + allocationAmount
           const totalAmount = Number(invoice.total_amount)
+          const paidOff = newAmountPaid >= totalAmount - 0.01
           let newStatus = invoice.status
-          if (newAmountPaid >= totalAmount) {
+          if (paidOff) {
             newStatus = "paid"
           } else if (newAmountPaid > 0) {
-            newStatus = "sent" // or could use "partially_paid" if that status exists
+            newStatus = "sent" // keep existing status scheme but ensure paid when cleared
           }
 
           const { error: invoiceError } = await supabase
@@ -209,10 +212,11 @@ export function PaymentForm({ invoices, clients = [], preSelectedInvoiceId, preS
         // Update invoice amount_paid
         const newAmountPaid = Number(selectedInvoice.amount_paid) + Number(formData.amount)
         const totalAmount = Number(selectedInvoice.total_amount)
+        const paidOff = newAmountPaid >= totalAmount - 0.01
 
         // Determine new status
         let newStatus = "sent"
-        if (newAmountPaid >= totalAmount) {
+        if (paidOff) {
           newStatus = "paid"
         }
 

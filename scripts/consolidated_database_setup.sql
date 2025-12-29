@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS public.organizations (
   state TEXT,
   zip_code TEXT,
   country TEXT DEFAULT 'USA',
+  tax_id TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

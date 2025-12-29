@@ -141,7 +141,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
 
           {/* Dropdown Panel */}
-          <div className="absolute left-full top-0 ml-3 w-96 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
+            <div className="absolute right-full top-0 -ml-3 w-96 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
             {/* Header */}
             <div className="bg-gradient-to-r from-slate-50 to-white px-4 py-3 border-b border-slate-200 flex items-center justify-between">
               <h3 className="font-semibold text-slate-900">Notifications</h3>

@@ -7,6 +7,16 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { useState, useMemo } from "react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { exportToCSV, ExportColumn, getTimestamp } from "@/lib/export-utils"
 import { Input } from "@/components/ui/input"
@@ -37,6 +47,8 @@ export function ClientsTable({ clients }: ClientsTableProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [clientToDelete, setClientToDelete] = useState<string | null>(null)
 
   // Sorting state
   const [sortColumn, setSortColumn] = useState<string | null>(null)
@@ -73,9 +85,12 @@ export function ClientsTable({ clients }: ClientsTableProps) {
       )
     }
     if (filters.email) {
-      filtered = filtered.filter(c => 
-        c.email.toLowerCase().includes(filters.email.toLowerCase())
-      )
+      const query = filters.email.toLowerCase()
+      filtered = filtered.filter(c => {
+        const emailMatch = (c.email || "").toLowerCase().includes(query)
+        const phoneMatch = (c.phone || "").toLowerCase().includes(query)
+        return emailMatch || phoneMatch
+      })
     }
     if (filters.city) {
       filtered = filtered.filter(c => 
@@ -311,9 +326,8 @@ export function ClientsTable({ clients }: ClientsTableProps) {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        if (confirm("Are you sure you want to delete this client?")) {
-                          handleDelete(client.id)
-                        }
+                        setClientToDelete(client.id)
+                        setDeleteDialogOpen(true)
                       }}
                     >
                       <Trash2 className="h-4 w-4 text-red-600" />
@@ -326,6 +340,26 @@ export function ClientsTable({ clients }: ClientsTableProps) {
         </Table>
       </div>
 
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete client?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the client and related references.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => clientToDelete && handleDelete(clientToDelete)}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
