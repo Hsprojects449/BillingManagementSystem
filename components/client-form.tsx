@@ -132,6 +132,27 @@ export function ClientForm({ client }: ClientFormProps) {
         throw new Error("User must belong to an organization")
       }
 
+      // Validate phone is provided and has correct length
+      if (!formData.phone || formData.phone.trim().length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Missing phone number",
+          description: "Please enter a valid phone number.",
+        })
+        setIsLoading(false)
+        return
+      }
+
+      if (formData.phone.length < 10) {
+        toast({
+          variant: "destructive",
+          title: "Invalid phone number",
+          description: "Phone number must be at least 10 digits.",
+        })
+        setIsLoading(false)
+        return
+      }
+
       const dueDays = Number(formData.due_days) || 0
       const valuePerBirdRaw = formData.value_per_bird.trim()
       const valuePerBird = valuePerBirdRaw === "" ? 0 : Number(valuePerBirdRaw)
@@ -187,8 +208,7 @@ export function ClientForm({ client }: ClientFormProps) {
         })
       }
 
-      router.push("/dashboard/clients")
-      router.refresh()
+      await router.push("/dashboard/clients")
     } catch (error: unknown) {
       let errorMessage = "An unexpected error occurred. Please try again."
       
@@ -245,7 +265,9 @@ export function ClientForm({ client }: ClientFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
+              <Label htmlFor="phone">
+                Phone <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="phone"
                 type="tel"
@@ -255,6 +277,7 @@ export function ClientForm({ client }: ClientFormProps) {
                 value={formData.phone}
                 onChange={(e) => handlePhoneChange(e.target.value)}
                 placeholder="00000 00000"
+                required
               />
             </div>
 

@@ -172,7 +172,7 @@ export function DashboardNav({ profile }: DashboardNavProps) {
           </button>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <nav className={cn("flex-1 p-4 space-y-1", !isSidebarCollapsed && "overflow-y-auto")}>
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))
@@ -194,7 +194,7 @@ export function DashboardNav({ profile }: DashboardNavProps) {
                 <Icon className="h-5 w-5 flex-shrink-0" />
                 {!isSidebarCollapsed && <span>{item.label}</span>}
                 {isSidebarCollapsed && (
-                  <div className="hidden group-hover:block absolute left-full ml-2 px-2 py-1 bg-slate-900 text-white text-xs rounded whitespace-nowrap">
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-slate-900 text-white text-xs rounded whitespace-nowrap z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     {item.label}
                   </div>
                 )}
@@ -203,11 +203,29 @@ export function DashboardNav({ profile }: DashboardNavProps) {
           })}
         </nav>
 
-        <div className="p-4 border-t border-slate-200">
-          <Button onClick={handleSignOut} variant="outline" className="w-full justify-start bg-transparent" size="sm" disabled={isSigningOut}>
-            {isSigningOut ? <Spinner className="h-4 w-4 mr-2" /> : <LogOut className="h-4 w-4 mr-2" />}
-            {isSigningOut ? "Signing out..." : "Sign Out"}
-          </Button>
+        <div className="p-4 border-t border-slate-200 flex-shrink-0">
+          <div className="relative group">
+            <Button 
+              onClick={handleSignOut} 
+              variant="outline" 
+              className={cn(
+                "bg-transparent transition-all",
+                isSidebarCollapsed ? "lg:w-10 lg:h-10 lg:p-0 lg:justify-center w-full" : "w-full justify-start"
+              )}
+              size="sm"
+              disabled={isSigningOut}
+            >
+              {isSigningOut ? <Spinner className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
+              {!isSidebarCollapsed && (
+                <span className="ml-2">{isSigningOut ? "Signing out..." : "Sign Out"}</span>
+              )}
+            </Button>
+            {isSidebarCollapsed && (
+              <div className="absolute left-full ml-2 px-2 py-1 bg-slate-900 text-white text-xs rounded whitespace-nowrap z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 bottom-0">
+                Sign Out
+              </div>
+            )}
+          </div>
         </div>
       </aside>
 

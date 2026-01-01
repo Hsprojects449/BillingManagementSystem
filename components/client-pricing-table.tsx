@@ -13,6 +13,16 @@ import { TablePagination } from "@/components/table-pagination"
 import { useToast } from "@/hooks/use-toast"
 import { getPriceForCategoryOnDate } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface PricingRule {
   id: string

@@ -170,7 +170,7 @@ export function UsersTable({ users, userRole }: { users: User[]; userRole?: stri
       toast({
         variant: "success",
         title: "User deactivated",
-        description: "The user has been deactivated successfully.",
+        description: "The user has been deactivated and will be removed from the list in 30 days.",
       })
       
       // Wait a moment for database transaction to complete, then force full reload
@@ -287,17 +287,19 @@ export function UsersTable({ users, userRole }: { users: User[]; userRole?: stri
                           <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </Link>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setUserToDelete({ id: user.id, name: user.full_name })
-                          setDeleteDialogOpen(true)
-                        }}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                      </Button>
+                      {user.is_active && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setUserToDelete({ id: user.id, name: user.full_name })
+                            setDeleteDialogOpen(true)
+                          }}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 )}
@@ -322,7 +324,7 @@ export function UsersTable({ users, userRole }: { users: User[]; userRole?: stri
         <AlertDialogHeader>
           <AlertDialogTitle>Deactivate user?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action will deactivate the user account. They will no longer be able to sign in.
+            This will deactivate the user account. They will no longer be able to sign in. The deactivated user will be automatically removed from the list after 30 days.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

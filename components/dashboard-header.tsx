@@ -27,7 +27,7 @@ export function DashboardHeader({ userId }: DashboardHeaderProps) {
       )}
     >
       <div className="flex items-center gap-4 flex-1 min-w-0">
-        {title && <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-slate-900 tracking-tight truncate">{title}</h1>}
+        {title && <h1 className="pl-4 text-lg sm:text-xl md:text-2xl font-semibold text-slate-900 tracking-tight truncate">{title}</h1>}
       </div>
       <div className="flex-shrink-0">
         <NotificationBell userId={userId} />

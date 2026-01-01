@@ -8,6 +8,9 @@ import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardLayoutClient } from "@/app/dashboard/layout-client"
 import { Suspense } from "react"
 
+// Prevent caching of dashboard pages to ensure auth check on every request
+export const revalidate = 0
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
 

@@ -7,6 +7,9 @@ import { DashboardPageWrapper } from "@/components/dashboard-page-wrapper"
 import { Suspense } from "react"
 import { LoadingOverlay } from "@/components/loading-overlay"
 
+// Prevent caching to ensure auth check on every request
+export const revalidate = 0
+
 export default async function DashboardPage() {
   const supabase = await createClient()
 

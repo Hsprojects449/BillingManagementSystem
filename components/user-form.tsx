@@ -79,11 +79,7 @@ export function UserForm({ organizations, initialData }: UserFormProps) {
           title: "Success",
           description: initialData ? "User updated successfully." : "User created successfully.",
         })
-        router.push("/dashboard/users")
-        // Add small delay to ensure route change completes
-        setTimeout(() => {
-          router.refresh()
-        }, 100)
+        await router.push("/dashboard/users")
       }
     } catch (error: any) {
       toast({
