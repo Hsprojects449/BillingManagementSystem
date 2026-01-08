@@ -7,6 +7,23 @@ import { Badge } from "@/components/ui/badge"
 import { DashboardPageWrapper } from "@/components/dashboard-page-wrapper"
 import { TrendingUp, DollarSign, FileText, Users, Clock, CheckCircle, AlertCircle } from "lucide-react"
 
+// Get current financial year date range
+function getCurrentFinancialYearRange() {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = today.getMonth() // 0-indexed
+  
+  // If month is Jan, Feb, or Mar (0, 1, 2), we're in the previous FY
+  const startYear = month < 3 ? year - 1 : year
+  const endYear = startYear + 1
+  
+  return {
+    start: `${startYear}-04-01`,
+    end: `${endYear}-03-31`,
+    fy: `${startYear}-${endYear}`
+  }
+}
+
 export default async function ReportsPage() {
   const supabase = await createClient()
 
@@ -23,10 +40,17 @@ export default async function ReportsPage() {
     redirect("/dashboard")
   }
 
-  // Fetch all necessary data for reports
+  // Get current FY range
+  const fyRange = getCurrentFinancialYearRange()
+
+  // Fetch all necessary data for reports (filtered by current FY)
   const [invoicesResult, paymentsResult, clientsResult] = await Promise.all([
-    supabase.from("invoices").select("*, clients(name)"),
-    supabase.from("payments").select("*"),
+    supabase.from("invoices").select("*, clients(name)")
+      .gte("issue_date", fyRange.start)
+      .lte("issue_date", fyRange.end),
+    supabase.from("payments").select("*")
+      .gte("payment_date", fyRange.start)
+      .lte("payment_date", fyRange.end),
     supabase.from("clients").select("id, name"),
   ])
 
@@ -87,6 +111,44 @@ export default async function ReportsPage() {
     .sort(([, a], [, b]) => b.total - a.total)
     .slice(0, 10)
 
+  // Overdue breakdown by days
+  const overdueBreakdown = {
+    "0-7": { count: 0, invoices: [] as typeof invoices },
+    "8-14": { count: 0, invoices: [] as typeof invoices },
+    "15-30": { count: 0, invoices: [] as typeof invoices },
+    "31-60": { count: 0, invoices: [] as typeof invoices },
+    "60+": { count: 0, invoices: [] as typeof invoices },
+  }
+
+  const overdueInvoicesList = invoices.filter((inv) => {
+    const balance = Number(inv.total_amount) - Number(inv.amount_paid)
+    const dueDate = new Date(inv.due_date)
+    const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / msInDay)
+    return balance > 0 && daysOverdue > 0
+  })
+
+  overdueInvoicesList.forEach((inv) => {
+    const dueDate = new Date(inv.due_date)
+    const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / msInDay)
+    
+    if (daysOverdue <= 7) {
+      overdueBreakdown["0-7"].invoices.push(inv)
+      overdueBreakdown["0-7"].count++
+    } else if (daysOverdue <= 14) {
+      overdueBreakdown["8-14"].invoices.push(inv)
+      overdueBreakdown["8-14"].count++
+    } else if (daysOverdue <= 30) {
+      overdueBreakdown["15-30"].invoices.push(inv)
+      overdueBreakdown["15-30"].count++
+    } else if (daysOverdue <= 60) {
+      overdueBreakdown["31-60"].invoices.push(inv)
+      overdueBreakdown["31-60"].count++
+    } else {
+      overdueBreakdown["60+"].invoices.push(inv)
+      overdueBreakdown["60+"].count++
+    }
+  })
+
   // Recent activity
   const recentInvoices = [...invoices]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -99,84 +161,90 @@ export default async function ReportsPage() {
   return (
     <DashboardPageWrapper title="Reports & Analytics">
       <div className="w-full p-4 sm:p-6 lg:p-8">
+        <div className="mb-6">
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Showing reports for Financial Year: <span className="font-semibold text-foreground">{fyRange.fy}</span>
+          </p>
+        </div>
+        
         {/* Key Metrics */}
-        <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Total Revenue</CardTitle>
+            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{totalRevenue.toFixed(2)}</div>
+            <div className="text-lg sm:text-2xl font-bold">₹{totalRevenue.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground mt-1">All-time payments received</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Invoiced</CardTitle>
-            <FileText className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Total Invoiced</CardTitle>
+            <FileText className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{totalInvoiced.toFixed(2)}</div>
+            <div className="text-lg sm:text-2xl font-bold">₹{totalInvoiced.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground mt-1">{invoices.length} invoices created</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Outstanding</CardTitle>
-            <AlertCircle className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Outstanding</CardTitle>
+            <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{totalOutstanding.toFixed(2)}</div>
+            <div className="text-lg sm:text-2xl font-bold">₹{totalOutstanding.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground mt-1">Pending payment collection</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Active Clients</CardTitle>
-            <Users className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Active Clients</CardTitle>
+            <Users className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{clients.length}</div>
+            <div className="text-lg sm:text-2xl font-bold">{clients.length}</div>
             <p className="text-xs text-muted-foreground mt-1">Total clients in system</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Invoice Status Overview */}
-      <div className="grid gap-6 md:grid-cols-3 mb-8">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Paid Invoices</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Paid Invoices</CardTitle>
+            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{paidInvoices}</div>
+            <div className="text-lg sm:text-2xl font-bold">{paidInvoices}</div>
             <p className="text-xs text-muted-foreground mt-1">Successfully completed</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Overdue Invoices</CardTitle>
-            <AlertCircle className="h-4 w-4 text-red-600" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Overdue Invoices</CardTitle>
+            <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{overdueInvoices}</div>
+            <div className="text-lg sm:text-2xl font-bold">{overdueInvoices}</div>
             <p className="text-xs text-muted-foreground mt-1">Require immediate attention</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Draft Invoices</CardTitle>
-            <Clock className="h-4 w-4 text-gray-600" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Draft Invoices</CardTitle>
+            <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{draftInvoices}</div>
+            <div className="text-lg sm:text-2xl font-bold">{draftInvoices}</div>
             <p className="text-xs text-muted-foreground mt-1">Not yet sent to clients</p>
           </CardContent>
         </Card>
@@ -186,6 +254,7 @@ export default async function ReportsPage() {
       <Tabs defaultValue="revenue" className="space-y-6">
         <TabsList>
           <TabsTrigger value="revenue">Revenue Trends</TabsTrigger>
+          <TabsTrigger value="overdues">Overdue by Days</TabsTrigger>
           <TabsTrigger value="clients">Top Clients</TabsTrigger>
           <TabsTrigger value="activity">Recent Activity</TabsTrigger>
         </TabsList>
@@ -228,6 +297,89 @@ export default async function ReportsPage() {
 
               {recentMonths.length === 0 && (
                 <p className="text-center text-muted-foreground py-8">No revenue data available</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="overdues" className="space-y-6">
+          <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 mb-6">
+            {Object.entries(overdueBreakdown).map(([range, data]) => (
+              <Card key={range}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs sm:text-sm font-medium">{range} Days</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg sm:text-2xl font-bold text-red-600">{data.count}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {data.count === 1 ? "invoice" : "invoices"}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Overdue Invoices Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {Object.entries(overdueBreakdown).map(([range, data]) => (
+                  <div key={range}>
+                    <h4 className="font-semibold text-sm mb-3">{range} Days Overdue ({data.count})</h4>
+                    {data.invoices.length > 0 ? (
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-muted/50">
+                              <TableHead className="text-xs">Invoice #</TableHead>
+                              <TableHead className="text-xs">Client</TableHead>
+                              <TableHead className="text-xs text-right">Amount</TableHead>
+                              <TableHead className="text-xs text-right">Balance</TableHead>
+                              <TableHead className="text-xs text-right">Due Date</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {data.invoices.slice(0, 5).map((inv) => {
+                              const balance = Number(inv.total_amount) - Number(inv.amount_paid)
+                              const dueDate = new Date(inv.due_date)
+                              const daysOverdue = Math.floor(
+                                (today.getTime() - dueDate.getTime()) / msInDay
+                              )
+                              return (
+                                <TableRow key={inv.id}>
+                                  <TableCell className="text-xs font-medium">#{inv.invoice_number}</TableCell>
+                                  <TableCell className="text-xs">{inv.clients.name}</TableCell>
+                                  <TableCell className="text-xs text-right">₹{Number(inv.total_amount).toFixed(2)}</TableCell>
+                                  <TableCell className="text-xs text-right font-semibold text-red-600">
+                                    ₹{balance.toFixed(2)}
+                                  </TableCell>
+                                  <TableCell className="text-xs text-right">
+                                    {dueDate.toLocaleDateString("en-IN")}
+                                    <br />
+                                    <span className="text-red-600 font-semibold">{daysOverdue}d</span>
+                                  </TableCell>
+                                </TableRow>
+                              )
+                            })}
+                          </TableBody>
+                        </Table>
+                        {data.invoices.length > 5 && (
+                          <div className="px-4 py-2 bg-muted/50 text-xs text-muted-foreground border-t">
+                            +{data.invoices.length - 5} more invoice{data.invoices.length - 5 > 1 ? "s" : ""}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground py-4">No overdue invoices in this range</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {overdueInvoicesList.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">No overdue invoices - great job!</p>
               )}
             </CardContent>
           </Card>

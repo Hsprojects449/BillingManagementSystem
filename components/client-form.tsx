@@ -76,7 +76,7 @@ export function ClientForm({ client }: ClientFormProps) {
           }))
         }
       } catch (err) {
-        console.error("Error fetching pincode data:", err)
+        // Silently fail pincode lookup
       } finally {
         setFetchingPincode(false)
       }
@@ -195,13 +195,8 @@ export function ClientForm({ client }: ClientFormProps) {
 
         if (error) throw error
         
-        // Send invitation email to new client
-        const emailResult = await sendClientInvitation(formData.email, formData.name)
-        
-        if (!emailResult.success) {
-          console.error("Failed to send client invitation email:", emailResult.error)
-          // Don't fail the client creation, just log the error
-        }
+        // Send invitation email to new client (non-critical)
+        await sendClientInvitation(formData.email, formData.name)
         
         toast({          variant: "success",          title: "Client created",
           description: `${formData.name} has been added successfully.`,

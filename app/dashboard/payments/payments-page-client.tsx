@@ -4,6 +4,7 @@ import { useState, useCallback } from "react"
 import { ClientSelector } from "@/components/client-selector"
 import { PaymentsTable } from "@/components/payments-table"
 import { Card, CardContent } from "@/components/ui/card"
+import { FinancialYearSelector, getFinancialYear, getFinancialYearDateRange } from "@/components/financial-year-selector"
 
 interface Client {
   id: string
@@ -47,10 +48,21 @@ interface PaymentsPageClientProps {
 
 export function PaymentsPageClient({ clients, payments, clientInvoices = {} }: PaymentsPageClientProps) {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
+  const [selectedFY, setSelectedFY] = useState<string>(getFinancialYear())
 
-  const filteredPayments = selectedClientId
-    ? payments.filter((payment) => payment.invoices?.client_id === selectedClientId)
-    : payments
+  // Filter payments by client and financial year
+  const filteredPayments = payments.filter((payment) => {
+    // Client filter
+    if (selectedClientId && payment.invoices?.client_id !== selectedClientId) {
+      return false
+    }
+    
+    // Financial year filter
+    const { start, end } = getFinancialYearDateRange(selectedFY)
+    const paymentDate = payment.payment_date
+    
+    return paymentDate >= start && paymentDate <= end
+  })
 
   // Get invoices for selected client
   const selectedClientInvoices = selectedClientId ? (clientInvoices[selectedClientId] || []) : []
@@ -144,10 +156,12 @@ export function PaymentsPageClient({ clients, payments, clientInvoices = {} }: P
       <PaymentsTable
         payments={filteredPayments}
         toolbarLeft={(
-          <>
-            <span className="text-sm font-medium text-muted-foreground">Filter by client:</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">Financial Year:</span>
+            <FinancialYearSelector selectedYear={selectedFY} onYearChange={setSelectedFY} />
+            <span className="text-sm font-medium text-muted-foreground">Client:</span>
             <ClientSelector clients={clients} selectedClientId={selectedClientId} onClientChange={setSelectedClientId} />
-          </>
+          </div>
         )}
       />
     </div>

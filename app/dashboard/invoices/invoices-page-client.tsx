@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { ClientSelector } from "@/components/client-selector"
 import { InvoicesTable } from "@/components/invoices-table"
+import { FinancialYearSelector, getFinancialYear, getFinancialYearDateRange } from "@/components/financial-year-selector"
 
 interface Client {
   id: string
@@ -31,20 +32,33 @@ interface InvoicesPageClientProps {
 
 export function InvoicesPageClient({ clients, invoices }: InvoicesPageClientProps) {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
+  const [selectedFY, setSelectedFY] = useState<string>(getFinancialYear())
 
-  const filteredInvoices = selectedClientId
-    ? invoices.filter((invoice) => invoice.client_id === selectedClientId)
-    : invoices
+  // Filter by client and financial year
+  const filteredInvoices = invoices.filter((invoice) => {
+    // Client filter
+    if (selectedClientId && invoice.client_id !== selectedClientId) {
+      return false
+    }
+    
+    // Financial year filter
+    const { start, end } = getFinancialYearDateRange(selectedFY)
+    const issueDate = invoice.issue_date
+    
+    return issueDate >= start && issueDate <= end
+  })
 
   return (
     <div className="space-y-6">
       <InvoicesTable
         invoices={filteredInvoices}
         toolbarLeft={(
-          <>
-            <span className="text-sm font-medium text-muted-foreground">Filter by client:</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">Financial Year:</span>
+            <FinancialYearSelector selectedYear={selectedFY} onYearChange={setSelectedFY} />
+            <span className="text-sm font-medium text-muted-foreground">Client:</span>
             <ClientSelector clients={clients} selectedClientId={selectedClientId} onClientChange={setSelectedClientId} />
-          </>
+          </div>
         )}
       />
     </div>

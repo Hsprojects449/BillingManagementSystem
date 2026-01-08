@@ -401,7 +401,7 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
   })
 
   // Calculate line total for each item
-  // Order: Subtotal → Add Tax → Apply Discount → Add Per-bird
+  // Order: Subtotal → Apply Discount → Calculate Tax on Discounted Amount → Add Tax → Add Per-bird
   const calculateLineTotal = (item: InvoiceItem) => {
     const qty = Number(item.quantity || 0)
     const unitPrice = Number(item.unit_price || 0)
@@ -409,56 +409,57 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
     const discountRate = Number(item.discount || 0)
 
     const subtotal = qty * unitPrice
-    const taxAmount = (subtotal * taxRate) / 100
-    const afterTax = subtotal + taxAmount
     const discountAmount = (subtotal * discountRate) / 100
-    const afterDiscount = afterTax - discountAmount
+    const afterDiscount = subtotal - discountAmount
+    const taxAmount = (afterDiscount * taxRate) / 100
+    const afterTax = afterDiscount + taxAmount
     
     // Apply per-bird adjustment only if bird_count is provided
     if (item.use_per_bird && item.bird_count != null) {
       const clientAdjustment = formData.client_id ? getClientAdjustment(formData.client_id) : 0
       const birdCount = Math.max(1, item.bird_count)
       const perBirdTotal = clientAdjustment * birdCount
-      return Math.max(0, afterDiscount + perBirdTotal)
+      return Math.max(0, afterTax + perBirdTotal)
     }
     
-    return Math.max(0, afterDiscount)
+    return Math.max(0, afterTax)
   }
 
   // Recalculate totals whenever items or invoice-level rates change
-  // Order: Sum line totals → Add invoice-level Tax → Apply invoice-level Discount
+  // Order: Sum line totals (includes all line-level adjustments) → Add invoice-level Tax → Apply invoice-level Discount
   useEffect(() => {
-    // Use line_total which includes per-bird adjustments
-    const subtotalFromLineTotals = items.reduce((sum, item) => sum + item.line_total, 0)
+    // Subtotal = sum of line totals (which includes per-bird adjustments)
+    const subtotal = items.reduce((sum, item) => sum + item.line_total, 0)
     
-    // For invoice-level rates, we still need the base subtotal (before line taxes/discounts/per-bird)
-    const baseSubtotal = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0)
+    // Invoice-level tax on subtotal (sum of line totals)
+    const invoice_tax_amount = (subtotal * Number(invoiceRates.tax_percent || 0)) / 100
+    
+    // Invoice-level discount on subtotal (sum of line totals)
+    const invoice_discount_amount = (subtotal * Number(invoiceRates.discount_percent || 0)) / 100
 
-    // Calculate line-item taxes (already included in line_total)
+    // Calculate total line-item adjustments (taxes + discounts) for display
     const line_tax_amount = items.reduce((sum, item) => {
       const itemSubtotal = Number(item.quantity || 0) * Number(item.unit_price || 0)
-      return sum + (itemSubtotal * Number(item.tax_rate || 0)) / 100
+      const discountAmount = (itemSubtotal * Number(item.discount || 0)) / 100
+      const afterDiscount = itemSubtotal - discountAmount
+      return sum + (afterDiscount * Number(item.tax_rate || 0)) / 100
     }, 0)
 
-    // Calculate line-item discounts (already included in line_total)
     const line_discount_amount = items.reduce(
-      (sum, item) => sum + (Number(item.quantity || 0) * Number(item.unit_price || 0) * Number(item.discount || 0)) / 100,
+      (sum, item) => {
+        const itemSubtotal = Number(item.quantity || 0) * Number(item.unit_price || 0)
+        return sum + (itemSubtotal * Number(item.discount || 0)) / 100
+      },
       0,
     )
 
-    // Invoice-level tax on base subtotal
-    const invoice_tax_amount = (baseSubtotal * Number(invoiceRates.tax_percent || 0)) / 100
-    
-    // Invoice-level discount on base subtotal
-    const invoice_discount_amount = (baseSubtotal * Number(invoiceRates.discount_percent || 0)) / 100
-
-    // Total starts with line totals (which include per-bird), then add/subtract invoice-level rates
-    const total_amount = subtotalFromLineTotals + invoice_tax_amount - invoice_discount_amount
+    // Total = Subtotal + Invoice Tax - Invoice Discount
+    const total_amount = subtotal + invoice_tax_amount - invoice_discount_amount
     const tax_amount = line_tax_amount + invoice_tax_amount
     const discount_amount = line_discount_amount + invoice_discount_amount
 
     setTotals({
-      subtotal: baseSubtotal,
+      subtotal,
       tax_amount,
       discount_amount,
       total_amount,
@@ -770,7 +771,7 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
           <CardTitle>Invoice Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="client_id">
                 Client <span className="text-red-500">*</span>
@@ -793,7 +794,7 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
               </Select>
             </div>
 
-              <div className="space-y-2 md:col-span-1">
+              <div className="space-y-2">
               <Label htmlFor="invoice_number">
                 Invoice Number <span className="text-red-500">*</span>
               </Label>
@@ -812,7 +813,7 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
 
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="issue_date">
                 Issue Date <span className="text-red-500">*</span>
@@ -847,10 +848,11 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
                 value={formData.due_date}
                 onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
               />
+
             </div>
           </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-3 sm:gap-4 grid-cols-1">
               <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>
             <Textarea
@@ -1021,10 +1023,10 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
                   </div>
 
                   {enabled && item && (
-                    <div className={`grid gap-4 ${item.use_per_bird ? "md:grid-cols-5" : "md:grid-cols-4"}`}>
+                    <div className={`grid gap-2 sm:gap-3 ${item.use_per_bird ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-2 sm:grid-cols-4"}`}>
                       {isLiveWholeBird(product.id, formData.client_id) && (
                         <div className="space-y-2">
-                          <Label>Per-bird</Label>
+                          <Label className="text-xs sm:text-sm">Per-bird</Label>
                           <div className="flex items-center gap-3 rounded-md border px-3 py-2">
                             <Switch
                               checked={!!item.use_per_bird}
@@ -1037,13 +1039,14 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
 
                       {item.use_per_bird && (
                         <div className="space-y-2">
-                          <Label>Birds</Label>
+                          <Label className="text-xs sm:text-sm">Birds</Label>
                           <Input
                             type="number"
                             min="1"
                             placeholder="e.g., 100 birds"
                             value={item.bird_count ?? ""}
                             onChange={(e) => handleBirdCountChange(index, e.target.value)}
+                            className="text-sm"
                           />
                         </div>
                       )}
@@ -1094,9 +1097,9 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
             })}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Invoice Discount (%)</Label>
+              <Label className="text-sm">Invoice Discount (%)</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -1106,10 +1109,11 @@ export function InvoiceForm({ clients, products, clientPricingRules, priceCatego
                 onChange={(e) =>
                   setInvoiceRates((r) => ({ ...r, discount_percent: e.target.value === "" ? null : Number(e.target.value) }))
                 }
+                className="text-sm"
               />
             </div>
             <div className="space-y-2">
-              <Label>Invoice Tax (%)</Label>
+              <Label className="text-sm">Invoice Tax (%)</Label>
               <Input
                 type="number"
                 step="0.01"

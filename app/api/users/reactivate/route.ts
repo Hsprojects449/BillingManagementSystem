@@ -5,7 +5,6 @@ import { createClient as createServerClient } from "@/lib/supabase/server"
 export async function POST(request: Request) {
   try {
     const { id } = await request.json()
-    console.log('Reactivate API called for user:', id)
     
     if (!id || typeof id !== "string") {
       return NextResponse.json({ error: "Missing or invalid 'id'" }, { status: 400 })
@@ -18,11 +17,8 @@ export async function POST(request: Request) {
     } as any)
 
     if (unbanError) {
-      console.error('Unban error:', unbanError)
       return NextResponse.json({ error: unbanError.message }, { status: 500 })
     }
-
-    console.log('User unbanned successfully')
 
     // Use admin client for profile update to bypass RLS
     const { error: profileError } = await admin
@@ -31,16 +27,12 @@ export async function POST(request: Request) {
       .eq("id", id)
 
     if (profileError) {
-      console.error('Profile update error:', profileError)
       return NextResponse.json({ error: profileError.message }, { status: 500 })
     }
-
-    console.log('Profile updated to active successfully')
 
     return NextResponse.json({ ok: true })
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Unknown error"
-    console.error('Reactivate API error:', message)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

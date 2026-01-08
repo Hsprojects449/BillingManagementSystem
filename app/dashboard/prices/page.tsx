@@ -52,7 +52,7 @@ export default async function PricesPage() {
   return (
     <DashboardPageWrapper title="Price Management">
       <div className="w-full p-4 sm:p-6 lg:p-8 space-y-4">
-        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3">
           <Button variant="outline" asChild className="w-full sm:w-auto">
             <Link href="/dashboard/prices/categories">
               Manage Categories

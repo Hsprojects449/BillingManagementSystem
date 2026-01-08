@@ -145,24 +145,18 @@ export function UsersTable({ users, userRole }: { users: User[]; userRole?: stri
 
   const handleDelete = async (id: string, name: string) => {
     try {
-      console.log('Deactivating user:', { id, name })
-      
       const res = await fetch("/api/users/deactivate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       })
 
-      console.log('Deactivate response status:', res.status)
-
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        console.error('Deactivate failed:', data)
         throw new Error(data?.error || "Failed to deactivate user")
       }
 
       const result = await res.json()
-      console.log('Deactivate result:', result)
 
       setDeleteDialogOpen(false)
       setUserToDelete(null)
@@ -173,13 +167,9 @@ export function UsersTable({ users, userRole }: { users: User[]; userRole?: stri
         description: "The user has been deactivated and will be removed from the list in 30 days.",
       })
       
-      // Wait a moment for database transaction to complete, then force full reload
-      await new Promise(resolve => setTimeout(resolve, 300))
-      
-      console.log('Forcing page reload')
-      window.location.reload()
+      // Refresh the page to reflect changes
+      router.refresh()
     } catch (err: unknown) {
-      console.error('Deactivate error:', err)
       toast({
         variant: "destructive",
         title: "Error",

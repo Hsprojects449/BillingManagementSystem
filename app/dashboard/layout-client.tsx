@@ -32,12 +32,12 @@ export function DashboardLayoutClient({ profile, children }: DashboardLayoutClie
       <DashboardNav profile={profile} />
       <main 
         className={cn(
-          "flex-1 flex flex-col bg-slate-50 transition-all duration-300",
+          "flex-1 flex flex-col bg-slate-50 transition-all duration-300 h-screen overflow-hidden",
           mounted && (!isSidebarCollapsed ? "lg:pl-64" : "lg:pl-20")
         )}
       >
         <DashboardHeader userId={profile?.id || ""} />
-        <div className="flex-1 overflow-y-auto overflow-x-hidden pt-16">
+        <div className="flex-1 overflow-y-auto overflow-x-auto pt-16">
           <Suspense 
             fallback={
               <div className="w-full h-full bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100" 

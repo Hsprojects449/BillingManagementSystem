@@ -222,26 +222,25 @@ export function PaymentsTable({ payments, toolbarLeft }: PaymentsTableProps) {
     })
   }
 
-  if (payments.length === 0) {
-    return (
-      <div className="text-center py-12 border rounded-lg bg-white">
-        <p className="text-muted-foreground">No payments recorded yet.</p>
-      </div>
-    )
-  }
-
   return (
     <>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
+        <div className="flex flex-wrap items-center gap-2">
           {toolbarLeft}
         </div>
-        <Button onClick={handleExport} size="sm" variant="outline" title="Export to CSV">
+        <Button onClick={handleExport} size="sm" variant="outline" title="Export to CSV" disabled={processedPayments.length === 0}>
           <Download className="h-4 w-4" />
         </Button>
       </div>
-      <div className="rounded-lg border bg-white overflow-x-auto">
-        <Table className="text-xs sm:text-sm">
+      
+      {processedPayments.length === 0 ? (
+        <div className="text-center py-12 border rounded-lg bg-white">
+          <p className="text-muted-foreground">No payments found for the selected filters.</p>
+        </div>
+      ) : (
+        <>
+          <div className="rounded-lg border bg-white overflow-x-auto">
+            <Table className="text-xs sm:text-sm">
           <TableHeader>
             <TableRow>
               <TableHead className="cursor-pointer hover:bg-muted/50 px-2 sm:px-4 py-2 sm:py-3" onClick={() => handleSort('date')}>
@@ -363,6 +362,8 @@ export function PaymentsTable({ payments, toolbarLeft }: PaymentsTableProps) {
         onPageChange={pagination.goToPage}
         onItemsPerPageChange={setItemsPerPage}
       />
+        </>
+      )}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

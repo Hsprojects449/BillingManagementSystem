@@ -96,7 +96,7 @@ export function PaymentForm({ invoices, clients = [], preSelectedInvoiceId, preS
         setAutoFilledInvoiceId(formData.invoice_id)
       }
     }
-  }, [formData.invoice_id, invoices, formData.amount, autoFilledInvoiceId])
+  }, [formData.invoice_id, invoices, autoFilledInvoiceId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

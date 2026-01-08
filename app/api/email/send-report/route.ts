@@ -1,0 +1,28 @@
+import { NextResponse } from "next/server"
+import { sendEmail } from "@/lib/email/send"
+
+export async function POST(request: Request) {
+  try {
+    const { to, subject, html } = await request.json()
+
+    if (!to || !subject || !html) {
+      return NextResponse.json(
+        { error: "Missing required fields: to, subject, html" },
+        { status: 400 }
+      )
+    }
+
+    await sendEmail({
+      to,
+      subject,
+      html,
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to send email" },
+      { status: 500 }
+    )
+  }
+}

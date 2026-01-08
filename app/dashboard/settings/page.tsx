@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DashboardPageWrapper } from "@/components/dashboard-page-wrapper"
 import { SettingsForm } from "@/components/settings-form"
 import { InvoiceTemplateForm } from "@/components/invoice-template-form"
+import { AutomatedReportsSettings } from "@/components/automated-reports-settings"
 
 async function InvoiceTemplateSection({ organizationId }: { organizationId: string }) {
   const supabase = await createClient()
@@ -86,6 +87,10 @@ export default async function SettingsPage() {
               {await InvoiceTemplateSection({ organizationId: profile.organization_id })}
             </CardContent>
           </Card>
+
+          <div className={isManagerViewOnly ? "pointer-events-none opacity-60" : ""}>
+            <AutomatedReportsSettings organization={organization} />
+          </div>
         </div>
       </div>
     </DashboardPageWrapper>

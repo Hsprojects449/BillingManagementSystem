@@ -21,8 +21,6 @@ async function UsersContent({ userRole }: { userRole: string }) {
     .select("*, organizations(name)")
     .order("created_at", { ascending: false })
 
-  console.log('Users fetched:', users?.map(u => ({ email: u.email, is_active: u.is_active })))
-
   return <UsersTable key={Date.now()} users={users || []} userRole={userRole} />
 }
 
@@ -49,7 +47,7 @@ export default async function UsersPage() {
   return (
     <DashboardPageWrapper title="User Management">
       <div className="w-full p-4 sm:p-6 lg:p-8 space-y-4">
-        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3">
           {userRole === "super_admin" && (
             <Link href="/dashboard/users/new">
               <Button className="w-full sm:w-auto">

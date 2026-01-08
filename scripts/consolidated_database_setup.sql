@@ -40,6 +40,9 @@ CREATE TABLE IF NOT EXISTS public.organizations (
   zip_code TEXT,
   country TEXT DEFAULT 'USA',
   tax_id TEXT,
+  automated_reports_enabled BOOLEAN NOT NULL DEFAULT false,
+  automated_report_settings JSONB NOT NULL DEFAULT '{"weekly": false, "monthly": false, "semi-annual": false, "annual": false}'::jsonb,
+  report_email TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -34,10 +34,6 @@ export default async function NewPaymentPage({
     .neq("status", "cancelled")
     .order("invoice_number", { ascending: false })
 
-  if (invoicesError) {
-    console.error("Error fetching invoices:", invoicesError)
-  }
-
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-6">

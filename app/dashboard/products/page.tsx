@@ -43,7 +43,7 @@ export default async function ProductsPage() {
   return (
     <DashboardPageWrapper title="Products & Services">
       <div className="w-full p-4 sm:p-6 lg:p-8 space-y-4">
-        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3">
           <Button asChild className="w-full sm:w-auto">
             <Link href="/dashboard/products/new">
               <Plus className="h-4 w-4 mr-2" />

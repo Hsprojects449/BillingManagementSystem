@@ -26,8 +26,8 @@ export function DashboardHeader({ userId }: DashboardHeaderProps) {
         mounted && (!isSidebarCollapsed ? "lg:pl-64" : "lg:pl-20")
       )}
     >
-      <div className="flex items-center gap-4 flex-1 min-w-0">
-        {title && <h1 className="pl-4 text-lg sm:text-xl md:text-2xl font-semibold text-slate-900 tracking-tight truncate">{title}</h1>}
+      <div className="flex items-center gap-4 flex-1 min-w-0 pl-12 sm:pl-4">
+        {title && <h1 className="text-sm sm:text-lg md:text-xl font-semibold text-slate-900 tracking-tight truncate">{title}</h1>}
       </div>
       <div className="flex-shrink-0">
         <NotificationBell userId={userId} />

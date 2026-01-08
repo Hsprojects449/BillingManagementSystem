@@ -20,7 +20,6 @@ export function exportToCSV(
   filename: string = 'export.csv'
 ) {
   if (data.length === 0) {
-    console.warn('No data to export')
     return
   }
 
@@ -69,7 +68,6 @@ export function exportToJSON(
   filename: string = 'export.json'
 ) {
   if (data.length === 0) {
-    console.warn('No data to export')
     return
   }
 

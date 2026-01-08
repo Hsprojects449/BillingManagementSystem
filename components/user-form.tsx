@@ -50,13 +50,11 @@ export function UserForm({ organizations, initialData }: UserFormProps) {
 
       if (initialData) {
         // Update existing user
-        console.log('Updating user with:', { id: initialData.id, formData })
         result = await updateUser(initialData.id, {
           full_name: formData.full_name,
           role: formData.role,
           is_active: formData.is_active,
         })
-        console.log('Update result:', result)
       } else {
         // Create new user
         result = await createUser({
