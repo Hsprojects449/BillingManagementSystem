@@ -1,20 +1,22 @@
 {
   "crons": [
     {
-      "path": "/api/cron/send-reports?type=weekly",
-      "schedule": "0 8 * * 1"
-    },
-    {
       "path": "/api/cron/send-reports?type=monthly",
       "schedule": "0 8 1 * *"
-    },
-    {
-      "path": "/api/cron/send-reports?type=semi-annual",
-      "schedule": "0 8 1 */6 *"
     },
     {
       "path": "/api/cron/send-reports?type=annual",
       "schedule": "0 8 31 3 *"
     }
+    /* Commented out - exceeds free tier limit
+    {
+      "path": "/api/cron/send-reports?type=weekly",
+      "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/cron/send-reports?type=semi-annual",
+      "schedule": "0 8 1 */6 *"
+    }
+    */
   ]
 }
