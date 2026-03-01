@@ -58,17 +58,26 @@ interface Invoice {
 interface InvoicesTableProps {
   invoices: Invoice[];
   toolbarLeft?: ReactNode;
+  userRole?: string;
 }
 
 const statusConfig = {
   draft: { label: "Draft", className: "bg-gray-100 text-gray-800" },
   recorded: { label: "Recorded", className: "bg-blue-100 text-blue-800" },
+  partially_paid: {
+    label: "Partially Paid",
+    className: "bg-yellow-100 text-yellow-800",
+  },
   paid: { label: "Paid", className: "bg-green-100 text-green-800" },
   overdue: { label: "Overdue", className: "bg-red-100 text-red-800" },
   cancelled: { label: "Cancelled", className: "bg-slate-100 text-slate-800" },
 };
 
-export function InvoicesTable({ invoices, toolbarLeft }: InvoicesTableProps) {
+export function InvoicesTable({
+  invoices,
+  toolbarLeft,
+  userRole,
+}: InvoicesTableProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -549,16 +558,18 @@ export function InvoicesTable({ invoices, toolbarLeft }: InvoicesTableProps) {
                               </Link>
                             </Button>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setInvoiceToDelete(invoice.id);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
-                          </Button>
+                          {userRole !== "accountant" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setInvoiceToDelete(invoice.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

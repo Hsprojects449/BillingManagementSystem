@@ -358,39 +358,42 @@ export function ClientForm({ client }: ClientFormProps) {
               )}
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <Label htmlFor="enable_per_bird">
-                  Enable Per-Bird Adjustment
-                </Label>
-                <Switch
-                  id="enable_per_bird"
-                  checked={formData.enable_per_bird}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, enable_per_bird: checked })
-                  }
-                />
+            <div className="space-y-2 md:col-span-2">
+              <div className="rounded-lg border p-4 bg-white space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">Per‑bird</span>
+                  <Switch
+                    id="enable_per_bird"
+                    checked={formData.enable_per_bird}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, enable_per_bird: checked })
+                    }
+                  />
+                </div>
+
+                {formData.enable_per_bird && (
+                  <div className="mt-2 space-y-2">
+                    <Label htmlFor="value_per_bird">Value per bird (₹)</Label>
+                    <Input
+                      id="value_per_bird"
+                      type="number"
+                      step="0.01"
+                      value={formData.value_per_bird}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          value_per_bird: e.target.value,
+                        })
+                      }
+                      placeholder="e.g., 1.50 or -0.75"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Positive adds charge per bird; negative applies discount.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-
-            {formData.enable_per_bird && (
-              <div className="space-y-2">
-                <Label htmlFor="value_per_bird">Value per bird (₹)</Label>
-                <Input
-                  id="value_per_bird"
-                  type="number"
-                  step="0.01"
-                  value={formData.value_per_bird}
-                  onChange={(e) =>
-                    setFormData({ ...formData, value_per_bird: e.target.value })
-                  }
-                  placeholder="e.g., 1.50 or -0.75"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Positive adds charge per bird; negative applies discount.
-                </p>
-              </div>
-            )}
 
             <div className="space-y-2">
               <Label htmlFor="country">Country</Label>

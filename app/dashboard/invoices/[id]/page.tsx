@@ -1,16 +1,21 @@
-import { createClient } from "@/lib/supabase/server"
-import { notFound } from "next/navigation"
-import { PrintableInvoice } from "@/components/printable-invoice"
-import { Notes } from "@/components/notes"
+import { createClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
+import { PrintableInvoice } from "@/components/printable-invoice";
+import { Notes } from "@/components/notes";
 
-export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const supabase = await createClient()
+export default async function InvoiceDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const supabase = await createClient();
 
   // Fetch invoice with all related data
   const { data: invoice } = await supabase
     .from("invoices")
-    .select(`
+    .select(
+      `
       *,
       clients (
         name,
@@ -19,7 +24,9 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         address,
         city,
         state,
-        zip_code
+        zip_code,
+        enable_per_bird,
+        value_per_bird
       ),
       invoice_items (
         description,
@@ -31,43 +38,47 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         bird_count,
         per_bird_adjustment
       )
-    `)
+    `,
+    )
     .eq("id", id)
-    .single()
+    .single();
 
   if (!invoice) {
-    notFound()
+    notFound();
   }
 
   // Fetch invoice template settings
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  let template = null
-  let userRole = null
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let template = null;
+  let userRole = null;
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("organization_id, role")
       .eq("id", user.id)
-      .single()
+      .single();
 
-    userRole = profile?.role
+    userRole = profile?.role;
 
     if (profile?.organization_id) {
       const { data: templateData } = await supabase
         .from("invoice_templates")
         .select("*")
         .eq("organization_id", profile.organization_id)
-        .single()
-      
-      template = templateData
+        .single();
+
+      template = templateData;
     }
   }
 
   // Fetch invoice notes
   const { data: invoiceNotesData } = await supabase
     .from("invoice_notes")
-    .select(`
+    .select(
+      `
       id,
       note,
       created_at,
@@ -76,29 +87,31 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         full_name,
         role
       )
-    `)
+    `,
+    )
     .eq("invoice_id", id)
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: false });
 
   // Filter out notes with null profiles
-  const invoiceNotes = (invoiceNotesData || [])
-    .filter((note: any) => note.created_by_profile !== null)
-    .map((note: any) => ({
-      id: note.id,
-      note: note.note,
-      created_at: note.created_at,
-      profiles: note.created_by_profile
-    })) || []
+  const invoiceNotes =
+    (invoiceNotesData || [])
+      .filter((note: any) => note.created_by_profile !== null)
+      .map((note: any) => ({
+        id: note.id,
+        note: note.note,
+        created_at: note.created_at,
+        profiles: note.created_by_profile,
+      })) || [];
 
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
       <PrintableInvoice invoice={invoice} template={template} />
-      <Notes 
-        notes={invoiceNotes || []} 
-        referenceId={id} 
+      <Notes
+        notes={invoiceNotes || []}
+        referenceId={id}
         referenceType="invoice"
         userRole={userRole}
       />
     </div>
-  )
+  );
 }

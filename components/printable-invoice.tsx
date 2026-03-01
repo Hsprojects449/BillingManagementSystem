@@ -33,6 +33,7 @@ interface Invoice {
   total_amount: string;
   amount_paid: string;
   notes: string | null;
+  total_birds?: number;
   clients: {
     name: string;
     email: string;
@@ -41,6 +42,8 @@ interface Invoice {
     city: string | null;
     state: string | null;
     zip_code: string | null;
+    enable_per_bird?: boolean;
+    value_per_bird?: string | null;
   };
   invoice_items: Array<{
     description: string;
@@ -81,6 +84,22 @@ export function PrintableInvoice({ invoice, template }: PrintableInvoiceProps) {
   const balance = Number(invoice.total_amount) - Number(invoice.amount_paid);
   const logoSrc =
     activeTemplate.company_logo_file || activeTemplate.company_logo_url;
+
+  // compute global bird totals if applicable
+  const totalBirds = Number(invoice.total_birds || 0);
+  const perBirdValue = invoice.clients.value_per_bird
+    ? Number(invoice.clients.value_per_bird)
+    : 0;
+  const perBirdAmount =
+    invoice.clients.enable_per_bird && perBirdValue !== 0
+      ? totalBirds * perBirdValue
+      : 0;
+
+  // total weight (kg) is just sum of item quantities
+  const totalWeight = invoice.invoice_items.reduce(
+    (sum, item) => sum + Number(item.quantity || 0),
+    0,
+  );
 
   const handlePrint = () => {
     setIsPrinting(true);
@@ -267,78 +286,41 @@ export function PrintableInvoice({ invoice, template }: PrintableInvoiceProps) {
               </tr>
             </thead>
             <tbody>
-              {invoice.invoice_items.map((item, index) => {
-                const hasPerBird =
-                  item.bird_count !== null && item.per_bird_adjustment !== null;
-                const baseAmount = hasPerBird
-                  ? Number(item.line_total) - Number(item.per_bird_adjustment)
-                  : Number(item.line_total);
-                const safeBirdCount = Math.max(1, Number(item.bird_count ?? 1));
-
-                return (
-                  <Fragment key={`item-group-${index}`}>
-                    <tr
-                      key={`item-${index}`}
-                      className="border-b border-gray-200"
-                    >
-                      <td className="py-3">{item.description}</td>
-                      <td className="text-right">
-                        {Number(item.quantity).toFixed(2)}
-                      </td>
-                      <td className="text-right">
-                        ₹{Number(item.unit_price).toFixed(2)}
-                      </td>
-                      <td className="text-right">₹{baseAmount.toFixed(2)}</td>
-                    </tr>
-                    {hasPerBird && (
-                      <tr
-                        key={`perbird-${index}`}
-                        className="border-b border-gray-200"
-                      >
-                        <td
-                          className="py-2 pl-8 text-sm text-amber-600"
-                          colSpan={5}
-                        >
-                          Per-bird adjustment ({safeBirdCount} birds × ₹
-                          {(
-                            Number(item.per_bird_adjustment || 0) /
-                            safeBirdCount
-                          ).toFixed(2)}
-                          /bird)
-                        </td>
-                        <td className="text-right text-sm text-amber-600">
-                          {Number(item.per_bird_adjustment) > 0 ? "+" : ""}₹
-                          {Number(item.per_bird_adjustment).toFixed(2)}
-                        </td>
-                      </tr>
-                    )}
-                    {hasPerBird && (
-                      <tr
-                        key={`total-${index}`}
-                        className="border-b border-gray-200 font-semibold"
-                      >
-                        <td className="py-2 pl-8 text-sm" colSpan={5}>
-                          Line Total
-                        </td>
-                        <td className="text-right text-sm">
-                          ₹{Number(item.line_total).toFixed(2)}
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
+              {invoice.invoice_items.map((item, index) => (
+                <tr key={`item-${index}`} className="border-b border-gray-200">
+                  <td className="py-3">{item.description}</td>
+                  <td className="text-right">
+                    {Number(item.quantity).toFixed(2)}
+                  </td>
+                  <td className="text-right">
+                    ₹{Number(item.unit_price).toFixed(2)}
+                  </td>
+                  <td className="text-right">
+                    ₹{Number(item.line_total).toFixed(2)}
+                  </td>
+                </tr>
+              ))}
             </tbody>
+            <tfoot>
+              <tr className="border-t border-gray-300">
+                <td className="py-2 font-semibold">Total weight (kgs):</td>
+                <td className="text-right font-semibold">
+                  {totalWeight.toFixed(2)}
+                </td>
+                <td></td>
+                <td></td>
+              </tr>
+            </tfoot>
           </table>
 
           {/* Totals */}
           <div className="flex justify-end mb-8">
             <div className="w-64">
-              {/*
               <div className="flex justify-between py-1">
                 <span>Subtotal:</span>
                 <span>₹{Number(invoice.subtotal).toFixed(2)}</span>
               </div>
+              {/*
               <div className="flex justify-between py-1">
                 <span>{activeTemplate.tax_label}:</span>
                 <span>₹{Number(invoice.tax_amount).toFixed(2)}</span>
@@ -348,6 +330,19 @@ export function PrintableInvoice({ invoice, template }: PrintableInvoiceProps) {
                 <div className="flex justify-between py-1 text-green-600">
                   <span>Discount:</span>
                   <span>-₹{Number(invoice.discount_amount).toFixed(2)}</span>
+                </div>
+              )}
+
+              {/* total weight row */}
+              {/* <div className="flex justify-between py-1">
+                <span>Total weight (kgs):</span>
+                <span>{totalWeight.toFixed(2)}</span>
+              </div> */}
+
+              {perBirdAmount !== 0 && (
+                <div className="flex justify-between py-1 text-amber-600">
+                  <span></span>
+                  <span>₹{perBirdAmount.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between py-2 font-bold text-lg border-t-2 border-gray-300">

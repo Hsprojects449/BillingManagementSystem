@@ -36,13 +36,15 @@ export default async function EditInvoicePage({
   ] = await Promise.all([
     supabase
       .from("clients")
-      .select("id, name, email, due_days, due_days_type, value_per_bird")
+      .select(
+        "id, name, email, due_days, due_days_type, enable_per_bird, value_per_bird",
+      )
       .order("name"),
     supabase.from("products").select("*").eq("is_active", true).order("name"),
     supabase
       .from("client_product_pricing")
       .select(
-        "product_id, price_rule_type, price_rule_value, price_category_id, fixed_base_value, client_id",
+        "product_id, price_rule_type, price_rule_value, price_category_id, fixed_base_value, client_id, conditional_threshold, conditional_discount_below, conditional_discount_above_equal",
       ),
     supabase.from("price_categories").select("id, name").order("name"),
     supabase
@@ -78,6 +80,7 @@ export default async function EditInvoicePage({
           tax_amount: Number(invoice.tax_amount),
           discount_amount: Number(invoice.discount_amount),
           total_amount: Number(invoice.total_amount),
+          total_birds: Number(invoice.total_birds || 0),
         }}
         initialItems={(invoice.invoice_items || []).map((it: any) => ({
           product_id: it.product_id,

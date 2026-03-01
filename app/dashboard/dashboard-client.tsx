@@ -52,8 +52,10 @@ export function DashboardClient({ clients, invoices }: DashboardClientProps) {
   const invoiceStats = {
     total: filteredInvoices.length,
     paid: filteredInvoices.filter((i) => i.status === "paid").length,
+    partiallyPaid: filteredInvoices.filter((i) => i.status === "partially_paid")
+      .length,
     unpaid: filteredInvoices.filter(
-      (i) => i.status === "recorded" || i.status === "draft",
+      (i) => i.status === "draft" || i.status === "recorded",
     ).length,
     // Overdue computed dynamically using full days overdue (consistency with chips and table)
     overdue: filteredInvoices.filter((i) => {

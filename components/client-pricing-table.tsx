@@ -46,6 +46,9 @@ interface PricingRule {
   fixed_base_value: number | null;
   notes: string | null;
   created_at: string;
+  conditional_threshold?: number | null;
+  conditional_discount_below?: number | null;
+  conditional_discount_above_equal?: number | null;
   clients: {
     name: string;
   };
@@ -74,6 +77,7 @@ const ruleTypeLabels = {
   discount_flat: "Flat Discount",
   multiplier: "Multiplier",
   flat_addition: "Add Amount",
+  conditional_discount: "Conditional",
 };
 
 export function ClientPricingTable({
@@ -132,7 +136,9 @@ export function ClientPricingTable({
             ? `₹${Number(rule.price_rule_value || 0).toFixed(2)}`
             : rule.price_rule_type === "flat_addition"
               ? `+ ₹${Number(rule.price_rule_value || 0).toFixed(2)}`
-              : `× ${rule.price_rule_value}`,
+              : rule.price_rule_type === "conditional_discount"
+                ? `<₹${Number(rule.conditional_threshold || 0).toFixed(0)}: -₹${Number(rule.conditional_discount_below || 0).toFixed(0)} | ≥₹${Number(rule.conditional_threshold || 0).toFixed(0)}: -₹${Number(rule.conditional_discount_above_equal || 0).toFixed(0)}`
+                : `× ${rule.price_rule_value}`,
       "Final Price": `₹${calculateFinalPrice(rule).toFixed(2)}`,
       Notes: rule.notes || "",
       "Created At": new Date(rule.created_at).toLocaleDateString(),
@@ -219,6 +225,8 @@ export function ClientPricingTable({
         return basePrice * ruleValue;
       case "flat_addition":
         return basePrice + ruleValue;
+      case "conditional_discount":
+        return basePrice; // Conditional discount depends on line amount, return base price for preview
       default:
         return basePrice;
     }
@@ -524,6 +532,21 @@ export function ClientPricingTable({
                       `× ${rule.price_rule_value}`}
                     {rule.price_rule_type === "flat_addition" &&
                       `+ ₹${Number(rule.price_rule_value || 0).toFixed(2)}`}
+                    {rule.price_rule_type === "conditional_discount" && (
+                      <span className="text-orange-600">
+                        &lt;₹
+                        {Number(rule.conditional_threshold || 0).toFixed(0)}: -₹
+                        {Number(rule.conditional_discount_below || 0).toFixed(
+                          0,
+                        )}
+                        {" | "}
+                        ≥₹{Number(rule.conditional_threshold || 0).toFixed(0)}:
+                        -₹
+                        {Number(
+                          rule.conditional_discount_above_equal || 0,
+                        ).toFixed(0)}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="font-bold text-green-600 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
                     ₹{finalPrice.toFixed(2)}

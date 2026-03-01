@@ -1,20 +1,36 @@
-import { createClient } from "@/lib/supabase/server"
-import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
-import Link from "next/link"
-import { InvoicesPageClient } from "./invoices-page-client"
-import { DashboardPageWrapper } from "@/components/dashboard-page-wrapper"
-import { Suspense } from "react"
-import { LoadingOverlay } from "@/components/loading-overlay"
+import { createClient } from "@/lib/supabase/server";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import Link from "next/link";
+import { InvoicesPageClient } from "./invoices-page-client";
+import { DashboardPageWrapper } from "@/components/dashboard-page-wrapper";
+import { Suspense } from "react";
+import { LoadingOverlay } from "@/components/loading-overlay";
 
 export default async function InvoicesPage() {
-  const supabase = await createClient()
+  const supabase = await createClient();
+
+  // Get current user
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Get user profile
+  let userRole: string | undefined;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    userRole = profile?.role;
+  }
 
   // Get all clients for selector
   const { data: clients } = await supabase
     .from("clients")
     .select("id, name")
-    .order("name", { ascending: true })
+    .order("name", { ascending: true });
 
   const { data: invoices } = await supabase
     .from("invoices")
@@ -25,7 +41,7 @@ export default async function InvoicesPage() {
       profiles!invoices_created_by_fkey(full_name)
     `,
     )
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: false });
 
   return (
     <DashboardPageWrapper title="Invoices">
@@ -40,9 +56,13 @@ export default async function InvoicesPage() {
         </div>
 
         <Suspense fallback={<LoadingOverlay />}>
-          <InvoicesPageClient clients={clients || []} invoices={invoices || []} />
+          <InvoicesPageClient
+            clients={clients || []}
+            invoices={invoices || []}
+            userRole={userRole}
+          />
         </Suspense>
       </div>
     </DashboardPageWrapper>
-  )
+  );
 }

@@ -92,7 +92,9 @@ export function PaymentsPageClient({
       total: selectedClientInvoices.length,
       paid: selectedClientInvoices.filter((i) => i.status === "paid").length,
       partiallyPaid: selectedClientInvoices.filter(
-        (i) => i.status === "recorded" && Number(i.amount_paid) > 0,
+        (i) =>
+          i.status === "partially_paid" ||
+          (i.status === "recorded" && Number(i.amount_paid) > 0),
       ).length,
       unpaid: selectedClientInvoices.filter(
         (i) => i.status === "recorded" && Number(i.amount_paid) === 0,

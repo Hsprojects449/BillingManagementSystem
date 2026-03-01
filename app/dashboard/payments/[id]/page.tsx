@@ -1,27 +1,32 @@
-import { createClient } from "@/lib/supabase/server"
-import { notFound } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, FileText } from "lucide-react"
-import Link from "next/link"
-import { Notes } from "@/components/notes"
+import { createClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, FileText } from "lucide-react";
+import Link from "next/link";
+import { Notes } from "@/components/notes";
 
 const statusConfig = {
   pending: { label: "Pending", className: "bg-yellow-100 text-yellow-800" },
   completed: { label: "Completed", className: "bg-green-100 text-green-800" },
   failed: { label: "Failed", className: "bg-red-100 text-red-800" },
   refunded: { label: "Refunded", className: "bg-slate-100 text-slate-800" },
-}
+};
 
-export default async function PaymentDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const supabase = await createClient()
+export default async function PaymentDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const supabase = await createClient();
 
   // Fetch payment with related data
-  const { data: payment } = await supabase
+  const { data: payment, error: paymentError } = await supabase
     .from("payments")
-    .select(`
+    .select(
+      `
       *,
       invoices (
         id,
@@ -37,30 +42,38 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
       profiles!payments_created_by_fkey (
         full_name
       )
-    `)
+    `,
+    )
     .eq("id", id)
-    .single()
+    .maybeSingle();
 
+  if (paymentError) {
+    // if no rows found, treat as not found
+    notFound();
+  }
   if (!payment) {
-    notFound()
+    notFound();
   }
 
   // Get user role
-  const { data: { user } } = await supabase.auth.getUser()
-  let userRole = null
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  let userRole = null;
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
-      .single()
-    userRole = profile?.role
+      .single();
+    userRole = profile?.role;
   }
 
   // Fetch payment notes
   const { data: paymentNotesData } = await supabase
     .from("payment_notes")
-    .select(`
+    .select(
+      `
       id,
       note,
       created_at,
@@ -69,21 +82,23 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
         full_name,
         role
       )
-    `)
+    `,
+    )
     .eq("payment_id", id)
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: false });
 
   // Transform notes to match expected type and filter out those with null profiles
-  const paymentNotes = (paymentNotesData || [])
-    .filter((note: any) => note.created_by_profile !== null)
-    .map((note: any) => ({
-      id: note.id,
-      note: note.note,
-      created_at: note.created_at,
-      profiles: note.created_by_profile
-    })) || []
+  const paymentNotes =
+    (paymentNotesData || [])
+      .filter((note: any) => note.created_by_profile !== null)
+      .map((note: any) => ({
+        id: note.id,
+        note: note.note,
+        created_at: note.created_at,
+        profiles: note.created_by_profile,
+      })) || [];
 
-  const config = statusConfig[payment.status as keyof typeof statusConfig]
+  const config = statusConfig[payment.status as keyof typeof statusConfig];
 
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
@@ -133,7 +148,8 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
               <div>
                 <p className="text-sm text-muted-foreground">Amount</p>
                 <p className="text-2xl font-bold text-green-600">
-                  ₹{Number(payment.amount).toLocaleString("en-IN", {
+                  ₹
+                  {Number(payment.amount).toLocaleString("en-IN", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
@@ -149,7 +165,9 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
 
               {payment.reference_number && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Reference Number</p>
+                  <p className="text-sm text-muted-foreground">
+                    Reference Number
+                  </p>
                   <p className="font-medium">{payment.reference_number}</p>
                 </div>
               )}
@@ -176,7 +194,9 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
 
               <div>
                 <p className="text-sm text-muted-foreground">Recorded By</p>
-                <p className="font-medium">{payment.profiles?.full_name || "Unknown"}</p>
+                <p className="font-medium">
+                  {payment.profiles?.full_name || "Unknown"}
+                </p>
               </div>
 
               <div>
@@ -201,23 +221,32 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
               <div className="p-3 bg-blue-50 rounded-lg">
                 <p className="text-sm text-muted-foreground">Invoice Total</p>
                 <p className="font-bold">
-                  ₹{Number(payment.invoices.total_amount).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                  })}
+                  ₹
+                  {Number(payment.invoices.total_amount).toLocaleString(
+                    "en-IN",
+                    {
+                      minimumFractionDigits: 2,
+                    },
+                  )}
                 </p>
               </div>
               <div className="p-3 bg-green-50 rounded-lg">
                 <p className="text-sm text-muted-foreground">Total Paid</p>
                 <p className="font-bold text-green-600">
-                  ₹{Number(payment.invoices.amount_paid).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                  })}
+                  ₹
+                  {Number(payment.invoices.amount_paid).toLocaleString(
+                    "en-IN",
+                    {
+                      minimumFractionDigits: 2,
+                    },
+                  )}
                 </p>
               </div>
               <div className="p-3 bg-orange-50 rounded-lg">
                 <p className="text-sm text-muted-foreground">Remaining</p>
                 <p className="font-bold text-orange-600">
-                  ₹{(
+                  ₹
+                  {(
                     Number(payment.invoices.total_amount) -
                     Number(payment.invoices.amount_paid)
                   ).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
@@ -236,5 +265,5 @@ export default async function PaymentDetailPage({ params }: { params: Promise<{ 
         userRole={userRole}
       />
     </div>
-  )
+  );
 }

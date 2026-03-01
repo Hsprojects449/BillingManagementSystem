@@ -67,7 +67,9 @@ export function InvoiceActions({
             Mark as Recorded
           </DropdownMenuItem>
         )}
-        {(currentStatus === "recorded" || currentStatus === "overdue") && (
+        {(currentStatus === "recorded" ||
+          currentStatus === "overdue" ||
+          currentStatus === "partially_paid") && (
           <DropdownMenuItem onClick={() => updateStatus("paid")}>
             <CheckCircle className="h-4 w-4 mr-2" />
             Mark as Paid

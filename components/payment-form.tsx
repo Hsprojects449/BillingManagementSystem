@@ -200,7 +200,7 @@ export function PaymentForm({
           if (paidOff) {
             newStatus = "paid";
           } else if (newAmountPaid > 0) {
-            newStatus = "recorded"; // keep existing status scheme but ensure paid when cleared
+            newStatus = "partially_paid";
           }
 
           const { error: invoiceError } = await supabase
@@ -249,6 +249,8 @@ export function PaymentForm({
         let newStatus = "recorded";
         if (paidOff) {
           newStatus = "paid";
+        } else if (newAmountPaid > 0) {
+          newStatus = "partially_paid";
         }
 
         const { error: invoiceError } = await supabase

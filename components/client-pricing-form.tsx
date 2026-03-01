@@ -46,6 +46,9 @@ interface PricingRule {
   price_category_id?: string | null;
   fixed_base_value?: number | null;
   notes: string;
+  conditional_threshold?: number | null;
+  conditional_discount_below?: number | null;
+  conditional_discount_above_equal?: number | null;
 }
 
 interface ProductPricingRule {
@@ -57,6 +60,9 @@ interface ProductPricingRule {
   enabled: boolean;
   fixed_value?: string;
   use_fixed_value?: boolean;
+  conditional_threshold?: string;
+  conditional_discount_below?: string;
+  conditional_discount_above_equal?: string;
 }
 
 interface ClientPricingFormProps {
@@ -110,6 +116,12 @@ export function ClientPricingForm({
           enabled: true,
           fixed_value: existingRule.fixed_base_value?.toString() || "",
           use_fixed_value: useFixedValue,
+          conditional_threshold:
+            existingRule.conditional_threshold?.toString() || "",
+          conditional_discount_below:
+            existingRule.conditional_discount_below?.toString() || "",
+          conditional_discount_above_equal:
+            existingRule.conditional_discount_above_equal?.toString() || "",
         },
       };
     }
@@ -178,10 +190,26 @@ export function ClientPricingForm({
         setIsLoading(false);
         return;
       }
-      if (!rule.price_rule_value) {
+      if (
+        rule.price_rule_type !== "conditional_discount" &&
+        !rule.price_rule_value
+      ) {
         setError("Please enter a rule value for all enabled products");
         setIsLoading(false);
         return;
+      }
+      if (rule.price_rule_type === "conditional_discount") {
+        if (
+          !rule.conditional_threshold ||
+          !rule.conditional_discount_below ||
+          !rule.conditional_discount_above_equal
+        ) {
+          setError(
+            "Please enter all conditional discount values (threshold, below, and above/equal)",
+          );
+          setIsLoading(false);
+          return;
+        }
       }
     }
 
@@ -215,9 +243,24 @@ export function ClientPricingForm({
         const rule = productRules[existingRule.product_id];
         const updateData: any = {
           price_rule_type: rule.price_rule_type,
-          price_rule_value: Number(rule.price_rule_value),
           notes: rule.notes,
         };
+
+        if (rule.price_rule_type === "conditional_discount") {
+          updateData.conditional_threshold = Number(rule.conditional_threshold);
+          updateData.conditional_discount_below = Number(
+            rule.conditional_discount_below,
+          );
+          updateData.conditional_discount_above_equal = Number(
+            rule.conditional_discount_above_equal,
+          );
+          updateData.price_rule_value = null;
+        } else {
+          updateData.price_rule_value = Number(rule.price_rule_value);
+          updateData.conditional_threshold = null;
+          updateData.conditional_discount_below = null;
+          updateData.conditional_discount_above_equal = null;
+        }
 
         if (rule.use_fixed_value) {
           updateData.fixed_base_value = Number(rule.fixed_value);
@@ -247,11 +290,28 @@ export function ClientPricingForm({
               client_id: selectedClient,
               product_id: rule.product_id,
               price_rule_type: rule.price_rule_type,
-              price_rule_value: Number(rule.price_rule_value),
               notes: rule.notes,
               organization_id: profile.organization_id,
               created_by: user.id,
             } as any;
+
+            if (rule.price_rule_type === "conditional_discount") {
+              baseData.conditional_threshold = Number(
+                rule.conditional_threshold,
+              );
+              baseData.conditional_discount_below = Number(
+                rule.conditional_discount_below,
+              );
+              baseData.conditional_discount_above_equal = Number(
+                rule.conditional_discount_above_equal,
+              );
+              baseData.price_rule_value = null;
+            } else {
+              baseData.price_rule_value = Number(rule.price_rule_value);
+              baseData.conditional_threshold = null;
+              baseData.conditional_discount_below = null;
+              baseData.conditional_discount_above_equal = null;
+            }
 
             if (rule.use_fixed_value) {
               baseData.fixed_base_value = Number(rule.fixed_value);
@@ -557,6 +617,9 @@ export function ClientPricingForm({
                               <SelectItem value="flat_addition">
                                 Flat Amount Addition (₹)
                               </SelectItem>
+                              <SelectItem value="conditional_discount">
+                                Conditional Discount (₹)
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                           <p className="text-xs text-muted-foreground">
@@ -568,40 +631,127 @@ export function ClientPricingForm({
                               "Enter multiplier on category price (e.g., 1.25 for 25% markup)"}
                             {rule.price_rule_type === "flat_addition" &&
                               "Enter flat amount to add to category price (e.g., 10 for ₹10 addition)"}
+                            {rule.price_rule_type === "conditional_discount" &&
+                              "Configure discount amounts based on quantity thresholds"}
                           </p>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label>
-                            Rule Value <span className="text-red-500">*</span>
-                          </Label>
-                          <Input
-                            type="number"
-                            step="0.0001"
-                            min="0"
-                            required={rule.enabled}
-                            value={rule.price_rule_value}
-                            onChange={(e) =>
-                              updateProductRule({
-                                price_rule_value: e.target.value,
-                              })
-                            }
-                            placeholder={
-                              rule.price_rule_type === "discount_percentage"
-                                ? "10"
-                                : rule.price_rule_type === "discount_flat"
-                                  ? "5.00"
-                                  : rule.price_rule_type === "flat_addition"
-                                    ? "10.00"
-                                    : "1.25"
-                            }
-                          />
-                        </div>
+                        {rule.price_rule_type !== "conditional_discount" && (
+                          <div className="space-y-2">
+                            <Label>
+                              Rule Value <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                              type="number"
+                              step="0.0001"
+                              min="0"
+                              required={rule.enabled}
+                              value={rule.price_rule_value}
+                              onChange={(e) =>
+                                updateProductRule({
+                                  price_rule_value: e.target.value,
+                                })
+                              }
+                              placeholder={
+                                rule.price_rule_type === "discount_percentage"
+                                  ? "10"
+                                  : rule.price_rule_type === "discount_flat"
+                                    ? "5.00"
+                                    : rule.price_rule_type === "flat_addition"
+                                      ? "10.00"
+                                      : "1.25"
+                              }
+                            />
+                          </div>
+                        )}
                       </div>
+
+                      {/* Conditional Discount Fields */}
+                      {rule.price_rule_type === "conditional_discount" && (
+                        <div className="space-y-4 border rounded-lg p-4 bg-orange-50">
+                          <div className="space-y-2">
+                            <Label>
+                              Threshold Amount (₹){" "}
+                              <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              required
+                              value={rule.conditional_threshold || ""}
+                              onChange={(e) =>
+                                updateProductRule({
+                                  conditional_threshold: e.target.value,
+                                })
+                              }
+                              placeholder="e.g., 1000"
+                              className="bg-white"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              The amount threshold for switching between
+                              discount levels
+                            </p>
+                          </div>
+
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label>
+                                Discount when amount &lt; threshold (₹){" "}
+                                <span className="text-red-500">*</span>
+                              </Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                required
+                                value={rule.conditional_discount_below || ""}
+                                onChange={(e) =>
+                                  updateProductRule({
+                                    conditional_discount_below: e.target.value,
+                                  })
+                                }
+                                placeholder="e.g., 500"
+                                className="bg-white"
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>
+                                Discount when amount ≥ threshold (₹){" "}
+                                <span className="text-red-500">*</span>
+                              </Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                required
+                                value={
+                                  rule.conditional_discount_above_equal || ""
+                                }
+                                onChange={(e) =>
+                                  updateProductRule({
+                                    conditional_discount_above_equal:
+                                      e.target.value,
+                                  })
+                                }
+                                placeholder="e.g., 750"
+                                className="bg-white"
+                              />
+                            </div>
+                          </div>
+
+                          <p className="text-xs text-orange-700 bg-orange-100 p-2 rounded">
+                            Example: If threshold is ₹1000, items ≤ ₹1000 get
+                            ₹500 discount, items &gt; ₹1000 get ₹750 discount
+                          </p>
+                        </div>
+                      )}
 
                       {(rule.price_category_id || rule.use_fixed_value) &&
                         rule.price_rule_value &&
                         rule.price_rule_type &&
+                        rule.price_rule_type !== "conditional_discount" &&
                         (() => {
                           let categoryPrice = 0;
                           let categoryName = "Fixed Value";
@@ -669,6 +819,52 @@ export function ClientPricingForm({
                             </div>
                           );
                         })()}
+
+                      {/* Conditional Discount Preview */}
+                      {rule.price_rule_type === "conditional_discount" &&
+                        rule.conditional_threshold &&
+                        rule.conditional_discount_below &&
+                        rule.conditional_discount_above_equal && (
+                          <div className="rounded-lg border bg-orange-50 p-4">
+                            <p className="text-sm font-medium text-orange-900 mb-3">
+                              Conditional Discount Preview
+                            </p>
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center p-3 bg-white rounded border border-orange-200">
+                                <span className="text-sm text-orange-800">
+                                  Amount &lt; ₹
+                                  {Number(rule.conditional_threshold).toFixed(
+                                    2,
+                                  )}
+                                </span>
+                                <span className="text-lg font-bold text-orange-700">
+                                  -₹
+                                  {Number(
+                                    rule.conditional_discount_below,
+                                  ).toFixed(2)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center p-3 bg-white rounded border border-orange-200">
+                                <span className="text-sm text-orange-800">
+                                  Amount ≥ ₹
+                                  {Number(rule.conditional_threshold).toFixed(
+                                    2,
+                                  )}
+                                </span>
+                                <span className="text-lg font-bold text-orange-700">
+                                  -₹
+                                  {Number(
+                                    rule.conditional_discount_above_equal,
+                                  ).toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="text-xs text-orange-600 mt-2">
+                              These discounts will be applied to invoice items
+                              based on their amount
+                            </p>
+                          </div>
+                        )}
 
                       <div className="space-y-2">
                         <Label>Notes</Label>
