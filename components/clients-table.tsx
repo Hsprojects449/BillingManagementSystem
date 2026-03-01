@@ -1,14 +1,30 @@
-"use client"
+"use client";
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Pencil, Trash2, Mail, Phone, Download, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
-import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
-import { useState, useMemo } from "react"
-import { usePagination } from "@/hooks/use-pagination"
-import { TablePagination } from "@/components/table-pagination"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import {
+  Pencil,
+  Trash2,
+  Mail,
+  Phone,
+  Download,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { useState, useMemo } from "react";
+import { usePagination } from "@/hooks/use-pagination";
+import { TablePagination } from "@/components/table-pagination";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,170 +34,175 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { useToast } from "@/hooks/use-toast"
-import { exportToCSV, ExportColumn, getTimestamp } from "@/lib/export-utils"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { exportToCSV, ExportColumn, getTimestamp } from "@/lib/export-utils";
+import { Input } from "@/components/ui/input";
 
 interface Client {
-  id: string
-  name: string
-  email: string
-  phone: string | null
-  address: string | null
-  city: string | null
-  state: string | null
-  zip_code: string | null
-  country: string | null
-  created_at: string
-  value_per_bird?: number | null
-  due_days?: number | null
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
+  country: string | null;
+  created_at: string;
+  value_per_bird?: number | null;
+  due_days?: number | null;
+  due_days_type?: string | null;
   profiles?: {
-    full_name: string
-  }
+    full_name: string;
+  };
 }
 
 interface ClientsTableProps {
-  clients: Client[]
+  clients: Client[];
 }
 
 export function ClientsTable({ clients }: ClientsTableProps) {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [clientToDelete, setClientToDelete] = useState<string | null>(null)
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<string | null>(null);
 
   // Sorting state
-  const [sortColumn, setSortColumn] = useState<string | null>(null)
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   // Pagination state
-  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Filter state
   const [filters, setFilters] = useState({
-    name: '',
-    email: '',
-    city: '',
-  })
+    name: "",
+    email: "",
+    city: "",
+  });
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
-      setSortColumn(column)
-      setSortDirection('asc')
+      setSortColumn(column);
+      setSortDirection("asc");
     }
-  }
+  };
 
   const handleFilterChange = (column: string, value: string) => {
-    setFilters(prev => ({ ...prev, [column]: value }))
-  }
+    setFilters((prev) => ({ ...prev, [column]: value }));
+  };
 
   // Apply filtering and sorting
   const processedClients = useMemo(() => {
-    let filtered = [...clients]
+    let filtered = [...clients];
 
     // Apply filters
     if (filters.name) {
-      filtered = filtered.filter(c => 
-        c.name.toLowerCase().includes(filters.name.toLowerCase())
-      )
+      filtered = filtered.filter((c) =>
+        c.name.toLowerCase().includes(filters.name.toLowerCase()),
+      );
     }
     if (filters.email) {
-      const query = filters.email.toLowerCase()
-      filtered = filtered.filter(c => {
-        const emailMatch = (c.email || "").toLowerCase().includes(query)
-        const phoneMatch = (c.phone || "").toLowerCase().includes(query)
-        return emailMatch || phoneMatch
-      })
+      const query = filters.email.toLowerCase();
+      filtered = filtered.filter((c) => {
+        const emailMatch = (c.email || "").toLowerCase().includes(query);
+        const phoneMatch = (c.phone || "").toLowerCase().includes(query);
+        return emailMatch || phoneMatch;
+      });
     }
     if (filters.city) {
-      filtered = filtered.filter(c => 
-        (c.city || '').toLowerCase().includes(filters.city.toLowerCase())
-      )
+      filtered = filtered.filter((c) =>
+        (c.city || "").toLowerCase().includes(filters.city.toLowerCase()),
+      );
     }
 
     // Apply sorting
     if (sortColumn) {
       filtered.sort((a, b) => {
-        let aVal: any
-        let bVal: any
+        let aVal: any;
+        let bVal: any;
 
         switch (sortColumn) {
-          case 'name':
-            aVal = a.name
-            bVal = b.name
-            break
-          case 'email':
-            aVal = a.email
-            bVal = b.email
-            break
-          case 'city':
-            aVal = a.city || ''
-            bVal = b.city || ''
-            break
-          case 'value_per_bird':
-            aVal = a.value_per_bird || 0
-            bVal = b.value_per_bird || 0
-            break
-          case 'due_days':
-            aVal = a.due_days || 0
-            bVal = b.due_days || 0
-            break
-          case 'created_at':
-            aVal = new Date(a.created_at).getTime()
-            bVal = new Date(b.created_at).getTime()
-            break
+          case "name":
+            aVal = a.name;
+            bVal = b.name;
+            break;
+          case "email":
+            aVal = a.email;
+            bVal = b.email;
+            break;
+          case "city":
+            aVal = a.city || "";
+            bVal = b.city || "";
+            break;
+          case "value_per_bird":
+            aVal = a.value_per_bird || 0;
+            bVal = b.value_per_bird || 0;
+            break;
+          case "due_days":
+            aVal = a.due_days || 0;
+            bVal = b.due_days || 0;
+            break;
+          case "created_at":
+            aVal = new Date(a.created_at).getTime();
+            bVal = new Date(b.created_at).getTime();
+            break;
           default:
-            return 0
+            return 0;
         }
 
-        if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1
-        if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1
-        return 0
-      })
+        if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+        if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+        return 0;
+      });
     }
 
-    return filtered
-  }, [clients, filters, sortColumn, sortDirection])
+    return filtered;
+  }, [clients, filters, sortColumn, sortDirection]);
 
   const pagination = usePagination({
     items: processedClients,
     itemsPerPage,
-  })
+  });
 
   const SortIcon = ({ column }: { column: string }) => {
-    if (sortColumn !== column) return <ArrowUpDown className="ml-2 h-4 w-4 inline opacity-40" />
-    return sortDirection === 'asc' 
-      ? <ArrowUp className="ml-2 h-4 w-4 inline" />
-      : <ArrowDown className="ml-2 h-4 w-4 inline" />
-  }
+    if (sortColumn !== column)
+      return <ArrowUpDown className="ml-2 h-4 w-4 inline opacity-40" />;
+    return sortDirection === "asc" ? (
+      <ArrowUp className="ml-2 h-4 w-4 inline" />
+    ) : (
+      <ArrowDown className="ml-2 h-4 w-4 inline" />
+    );
+  };
 
   const handleDelete = async (id: string) => {
-    setIsDeleting(true)
-    const supabase = createClient()
+    setIsDeleting(true);
+    const supabase = createClient();
 
-    const { error } = await supabase.from("clients").delete().eq("id", id)
+    const { error } = await supabase.from("clients").delete().eq("id", id);
 
     if (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to delete client. They may have associated invoices.",
-      })
+        description:
+          "Failed to delete client. They may have associated invoices.",
+      });
     } else {
       toast({
         variant: "success",
         title: "Client deleted",
         description: "The client has been deleted successfully.",
-      })
-      router.refresh()
+      });
+      router.refresh();
     }
 
-    setIsDeleting(false)
-  }
+    setIsDeleting(false);
+  };
 
   const handleExport = () => {
     const columns: ExportColumn[] = [
@@ -193,7 +214,11 @@ export function ClientsTable({ clients }: ClientsTableProps) {
       { key: "state", label: "State" },
       { key: "zip_code", label: "Zip Code" },
       { key: "country", label: "Country" },
-      { key: "value_per_bird", label: "Value Per Bird", formatter: (val) => val != null ? Number(val).toFixed(2) : "" },
+      {
+        key: "value_per_bird",
+        label: "Value Per Bird",
+        formatter: (val) => (val != null ? Number(val).toFixed(2) : ""),
+      },
       { key: "due_days", label: "Due Days" },
       {
         key: "created_at",
@@ -205,28 +230,35 @@ export function ClientsTable({ clients }: ClientsTableProps) {
             day: "2-digit",
           }),
       },
-    ]
+    ];
 
-    exportToCSV(processedClients, columns, `clients-${getTimestamp()}.csv`)
+    exportToCSV(processedClients, columns, `clients-${getTimestamp()}.csv`);
     toast({
       variant: "success",
       title: "Exported",
       description: `${processedClients.length} client(s) exported to CSV successfully.`,
-    })
-  }
+    });
+  };
 
   if (clients.length === 0) {
     return (
       <div className="text-center py-12 border rounded-lg bg-white">
-        <p className="text-muted-foreground">No clients found. Add your first client to get started.</p>
+        <p className="text-muted-foreground">
+          No clients found. Add your first client to get started.
+        </p>
       </div>
-    )
+    );
   }
 
   return (
     <>
       <div className="flex justify-end mb-4">
-        <Button onClick={handleExport} size="sm" variant="outline" title="Export to CSV">
+        <Button
+          onClick={handleExport}
+          size="sm"
+          variant="outline"
+          title="Export to CSV"
+        >
           <Download className="h-4 w-4" />
         </Button>
       </div>
@@ -234,32 +266,59 @@ export function ClientsTable({ clients }: ClientsTableProps) {
         <Table className="text-xs sm:text-sm">
           <TableHeader>
             <TableRow>
-              <TableHead className="cursor-pointer hover:bg-muted/50 px-2 sm:px-4 py-2 sm:py-3" onClick={() => handleSort('name')}>
-                <span className="hidden sm:inline">Name</span><span className="sm:hidden">Client</span><SortIcon column="name" />
+              <TableHead
+                className="cursor-pointer hover:bg-muted/50 px-2 sm:px-4 py-2 sm:py-3"
+                onClick={() => handleSort("name")}
+              >
+                <span className="hidden sm:inline">Name</span>
+                <span className="sm:hidden">Client</span>
+                <SortIcon column="name" />
               </TableHead>
-              <TableHead className="hidden sm:table-cell cursor-pointer hover:bg-muted/50 px-2 sm:px-4 py-2 sm:py-3" onClick={() => handleSort('email')}>
-                Contact<SortIcon column="email" />
+              <TableHead
+                className="hidden sm:table-cell cursor-pointer hover:bg-muted/50 px-2 sm:px-4 py-2 sm:py-3"
+                onClick={() => handleSort("email")}
+              >
+                Contact
+                <SortIcon column="email" />
               </TableHead>
-              <TableHead className="hidden md:table-cell cursor-pointer hover:bg-muted/50 px-2 sm:px-4 py-2 sm:py-3" onClick={() => handleSort('city')}>
-                Location<SortIcon column="city" />
+              <TableHead
+                className="hidden md:table-cell cursor-pointer hover:bg-muted/50 px-2 sm:px-4 py-2 sm:py-3"
+                onClick={() => handleSort("city")}
+              >
+                Location
+                <SortIcon column="city" />
               </TableHead>
-              <TableHead className="hidden lg:table-cell cursor-pointer hover:bg-muted/50 px-2 sm:px-4 py-2 sm:py-3" onClick={() => handleSort('value_per_bird')}>
-                Value/Bird<SortIcon column="value_per_bird" />
+              <TableHead
+                className="hidden lg:table-cell cursor-pointer hover:bg-muted/50 px-2 sm:px-4 py-2 sm:py-3"
+                onClick={() => handleSort("value_per_bird")}
+              >
+                Value/Bird
+                <SortIcon column="value_per_bird" />
               </TableHead>
-              <TableHead className="hidden lg:table-cell cursor-pointer hover:bg-muted/50 px-2 sm:px-4 py-2 sm:py-3" onClick={() => handleSort('due_days')}>
-                Due Days<SortIcon column="due_days" />
+              <TableHead
+                className="hidden lg:table-cell cursor-pointer hover:bg-muted/50 px-2 sm:px-4 py-2 sm:py-3"
+                onClick={() => handleSort("due_days")}
+              >
+                Due Payment
+                <SortIcon column="due_days" />
               </TableHead>
-              <TableHead className="hidden md:table-cell cursor-pointer hover:bg-muted/50 px-2 sm:px-4 py-2 sm:py-3" onClick={() => handleSort('created_at')}>
-                Created<SortIcon column="created_at" />
+              <TableHead
+                className="hidden md:table-cell cursor-pointer hover:bg-muted/50 px-2 sm:px-4 py-2 sm:py-3"
+                onClick={() => handleSort("created_at")}
+              >
+                Created
+                <SortIcon column="created_at" />
               </TableHead>
-              <TableHead className="text-right px-2 sm:px-4 py-2 sm:py-3">Actions</TableHead>
+              <TableHead className="text-right px-2 sm:px-4 py-2 sm:py-3">
+                Actions
+              </TableHead>
             </TableRow>
             <TableRow>
               <TableHead className="px-2 sm:px-4 py-2">
                 <Input
                   placeholder="Filter..."
                   value={filters.name}
-                  onChange={(e) => handleFilterChange('name', e.target.value)}
+                  onChange={(e) => handleFilterChange("name", e.target.value)}
                   className="h-7 text-xs"
                 />
               </TableHead>
@@ -267,7 +326,7 @@ export function ClientsTable({ clients }: ClientsTableProps) {
                 <Input
                   placeholder="Filter..."
                   value={filters.email}
-                  onChange={(e) => handleFilterChange('email', e.target.value)}
+                  onChange={(e) => handleFilterChange("email", e.target.value)}
                   className="h-7 text-xs"
                 />
               </TableHead>
@@ -275,7 +334,7 @@ export function ClientsTable({ clients }: ClientsTableProps) {
                 <Input
                   placeholder="Filter..."
                   value={filters.city}
-                  onChange={(e) => handleFilterChange('city', e.target.value)}
+                  onChange={(e) => handleFilterChange("city", e.target.value)}
                   className="h-7 text-xs"
                 />
               </TableHead>
@@ -288,7 +347,9 @@ export function ClientsTable({ clients }: ClientsTableProps) {
           <TableBody>
             {pagination.paginatedItems.map((client) => (
               <TableRow key={client.id} className="text-xs sm:text-sm">
-                <TableCell className="font-medium px-2 sm:px-4 py-2 sm:py-3 max-w-[120px] sm:max-w-none truncate">{client.name}</TableCell>
+                <TableCell className="font-medium px-2 sm:px-4 py-2 sm:py-3 max-w-[120px] sm:max-w-none truncate">
+                  {client.name}
+                </TableCell>
                 <TableCell className="hidden sm:table-cell px-2 sm:px-4 py-2 sm:py-3">
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-1 text-xs sm:text-sm">
@@ -313,18 +374,25 @@ export function ClientsTable({ clients }: ClientsTableProps) {
                   )}
                 </TableCell>
                 <TableCell className="hidden lg:table-cell px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
-                  {client.value_per_bird !== undefined && client.value_per_bird !== null
+                  {client.value_per_bird !== undefined &&
+                  client.value_per_bird !== null
                     ? `₹${Number(client.value_per_bird).toFixed(2)}`
                     : "-"}
                 </TableCell>
                 <TableCell className="hidden lg:table-cell px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
-                  {client.due_days ?? 0}
+                  {client.due_days_type === "end_of_month" ? (
+                    <span className="font-semibold text-blue-600">
+                      End of the billed month
+                    </span>
+                  ) : (
+                    `${client.due_days ?? 0} days`
+                  )}
                 </TableCell>
                 <TableCell className="hidden md:table-cell px-2 sm:px-4 py-2 sm:py-3 text-xs text-muted-foreground">
-                  {new Date(client.created_at).toLocaleDateString('en-IN', { 
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric' 
+                  {new Date(client.created_at).toLocaleDateString("en-IN", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
                   })}
                 </TableCell>
                 <TableCell className="text-right px-2 sm:px-4 py-2 sm:py-3">
@@ -338,8 +406,8 @@ export function ClientsTable({ clients }: ClientsTableProps) {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        setClientToDelete(client.id)
-                        setDeleteDialogOpen(true)
+                        setClientToDelete(client.id);
+                        setDeleteDialogOpen(true);
                       }}
                     >
                       <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
@@ -366,7 +434,8 @@ export function ClientsTable({ clients }: ClientsTableProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete client?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the client and related references.
+              This action cannot be undone. This will permanently delete the
+              client and related references.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -382,5 +451,5 @@ export function ClientsTable({ clients }: ClientsTableProps) {
         </AlertDialogContent>
       </AlertDialog>
     </>
-  )
+  );
 }

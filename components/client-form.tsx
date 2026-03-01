@@ -1,45 +1,54 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Spinner } from "@/components/ui/spinner"
-import { useToast } from "@/hooks/use-toast"
-import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { sendClientInvitation } from "@/app/actions/send-client-invitation"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/hooks/use-toast";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { sendClientInvitation } from "@/app/actions/send-client-invitation";
 
 interface Client {
-  id: string
-  name: string
-  email: string
-  phone: string | null
-  address: string | null
-  city: string | null
-  state: string | null
-  zip_code: string | null
-  country: string | null
-  notes: string | null
-  due_days?: number | null
-  value_per_bird?: number | null
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
+  country: string | null;
+  notes: string | null;
+  due_days?: number | null;
+  due_days_type?: string | null;
+  enable_per_bird?: boolean | null;
+  value_per_bird?: number | null;
 }
 
 interface ClientFormProps {
-  client?: Client
+  client?: Client;
 }
 
 export function ClientForm({ client }: ClientFormProps) {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
-  const [fetchingPincode, setFetchingPincode] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [fetchingPincode, setFetchingPincode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: client?.name || "",
@@ -52,36 +61,40 @@ export function ClientForm({ client }: ClientFormProps) {
     country: client?.country || "India",
     notes: client?.notes || "",
     due_days: client?.due_days?.toString() || "30",
+    due_days_type: client?.due_days_type || "fixed_days",
+    enable_per_bird: client?.enable_per_bird || false,
     value_per_bird: client?.value_per_bird?.toString() || "0",
-  })
+  });
 
   const handlePincodeChange = async (pincode: string) => {
-    const digitsOnly = pincode.replace(/\D/g, "").slice(0, 6)
-    setFormData({ ...formData, zip_code: digitsOnly })
+    const digitsOnly = pincode.replace(/\D/g, "").slice(0, 6);
+    setFormData({ ...formData, zip_code: digitsOnly });
 
     // Only fetch if pincode is 6 digits (Indian pincode format)
     if (digitsOnly.length === 6 && /^\d{6}$/.test(digitsOnly)) {
-      setFetchingPincode(true)
+      setFetchingPincode(true);
       try {
-        const response = await fetch(`https://api.postalpincode.in/pincode/${digitsOnly}`)
-        const data = await response.json()
-        
+        const response = await fetch(
+          `https://api.postalpincode.in/pincode/${digitsOnly}`,
+        );
+        const data = await response.json();
+
         if (data[0]?.Status === "Success" && data[0]?.PostOffice?.length > 0) {
-          const postOffice = data[0].PostOffice[0]
-          setFormData(prev => ({
+          const postOffice = data[0].PostOffice[0];
+          setFormData((prev) => ({
             ...prev,
             city: postOffice.District || prev.city,
             state: postOffice.State || prev.state,
             country: "India",
-          }))
+          }));
         }
       } catch (err) {
         // Silently fail pincode lookup
       } finally {
-        setFetchingPincode(false)
+        setFetchingPincode(false);
       }
     }
-  }
+  };
 
   const countries = [
     "India",
@@ -92,32 +105,32 @@ export function ClientForm({ client }: ClientFormProps) {
     "Singapore",
     "UAE",
     "Other",
-  ]
+  ];
 
   const handlePhoneChange = (value: string) => {
-    const digitsOnly = value.replace(/\D/g, "").slice(0, 10)
-    setFormData((prev) => ({ ...prev, phone: digitsOnly }))
-  }
+    const digitsOnly = value.replace(/\D/g, "").slice(0, 10);
+    setFormData((prev) => ({ ...prev, phone: digitsOnly }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError(null)
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
 
-    const supabase = createClient()
+    const supabase = createClient();
 
     // Get current user
     const {
       data: { user },
-    } = await supabase.auth.getUser()
+    } = await supabase.auth.getUser();
     if (!user) {
       toast({
         variant: "destructive",
         title: "Authentication required",
         description: "You must be logged in to perform this action.",
-      })
-      setIsLoading(false)
-      return
+      });
+      setIsLoading(false);
+      return;
     }
 
     try {
@@ -126,10 +139,10 @@ export function ClientForm({ client }: ClientFormProps) {
         .from("profiles")
         .select("organization_id")
         .eq("id", user.id)
-        .single()
+        .single();
 
       if (!profile?.organization_id) {
-        throw new Error("User must belong to an organization")
+        throw new Error("User must belong to an organization");
       }
 
       // Validate phone is provided and has correct length
@@ -138,9 +151,9 @@ export function ClientForm({ client }: ClientFormProps) {
           variant: "destructive",
           title: "Missing phone number",
           description: "Please enter a valid phone number.",
-        })
-        setIsLoading(false)
-        return
+        });
+        setIsLoading(false);
+        return;
       }
 
       if (formData.phone.length < 10) {
@@ -148,84 +161,94 @@ export function ClientForm({ client }: ClientFormProps) {
           variant: "destructive",
           title: "Invalid phone number",
           description: "Phone number must be at least 10 digits.",
-        })
-        setIsLoading(false)
-        return
+        });
+        setIsLoading(false);
+        return;
       }
 
-      const dueDays = Number(formData.due_days) || 0
-      const valuePerBirdRaw = formData.value_per_bird.trim()
-      const valuePerBird = valuePerBirdRaw === "" ? 0 : Number(valuePerBirdRaw)
+      const dueDays = Number(formData.due_days) || 0;
+      const valuePerBirdRaw = formData.enable_per_bird
+        ? formData.value_per_bird.trim()
+        : "0";
+      const valuePerBird = valuePerBirdRaw === "" ? 0 : Number(valuePerBirdRaw);
 
       if (Number.isNaN(valuePerBird)) {
         toast({
           variant: "destructive",
           title: "Invalid per-bird value",
           description: "Please enter a valid number (can be negative).",
-        })
-        setIsLoading(false)
-        return
+        });
+        setIsLoading(false);
+        return;
       }
 
       if (client) {
         // Update existing client
         const { error } = await supabase
           .from("clients")
-          .update({ ...formData, due_days: dueDays, value_per_bird: valuePerBird })
-          .eq("id", client.id)
+          .update({
+            ...formData,
+            due_days: dueDays,
+            value_per_bird: valuePerBird,
+          })
+          .eq("id", client.id);
 
-        if (error) throw error
-        
+        if (error) throw error;
+
         toast({
           variant: "success",
           title: "Client updated",
           description: "Client information has been updated successfully.",
-        })
+        });
       } else {
         // Create new client
-        const { error } = await supabase
-          .from("clients")
-          .insert({
-            ...formData,
-            due_days: dueDays,
-            value_per_bird: valuePerBird,
-            created_by: user.id,
-            organization_id: profile.organization_id,
-          })
+        const { error } = await supabase.from("clients").insert({
+          ...formData,
+          due_days: dueDays,
+          value_per_bird: valuePerBird,
+          created_by: user.id,
+          organization_id: profile.organization_id,
+        });
 
-        if (error) throw error
-        
+        if (error) throw error;
+
         // Send invitation email to new client (non-critical)
-        await sendClientInvitation(formData.email, formData.name)
-        
-        toast({          variant: "success",          title: "Client created",
+        await sendClientInvitation(formData.email, formData.name);
+
+        toast({
+          variant: "success",
+          title: "Client created",
           description: `${formData.name} has been added successfully.`,
-        })
+        });
       }
 
-      await router.push("/dashboard/clients")
+      await router.push("/dashboard/clients");
     } catch (error: unknown) {
-      let errorMessage = "An unexpected error occurred. Please try again."
-      
+      let errorMessage = "An unexpected error occurred. Please try again.";
+
       if (error instanceof Error) {
-        if (error.message.includes('duplicate') || error.message.includes('unique')) {
-          errorMessage = "A client with this email already exists in your organization."
-        } else if (error.message.includes('organization')) {
-          errorMessage = "Organization error: Please contact support."
+        if (
+          error.message.includes("duplicate") ||
+          error.message.includes("unique")
+        ) {
+          errorMessage =
+            "A client with this email already exists in your organization.";
+        } else if (error.message.includes("organization")) {
+          errorMessage = "Organization error: Please contact support.";
         } else {
-          errorMessage = error.message
+          errorMessage = error.message;
         }
       }
-      
+
       toast({
         variant: "destructive",
         title: "Error",
         description: errorMessage,
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <Card>
@@ -240,7 +263,9 @@ export function ClientForm({ client }: ClientFormProps) {
                 id="name"
                 required
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 placeholder="ABC Corporation"
               />
             </div>
@@ -254,7 +279,9 @@ export function ClientForm({ client }: ClientFormProps) {
                 type="email"
                 required
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
                 placeholder="contact@example.com"
               />
             </div>
@@ -277,34 +304,102 @@ export function ClientForm({ client }: ClientFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="due_days">Due days to pay</Label>
+              <Label htmlFor="due_days_type">Due Payment Type</Label>
+              <Select
+                value={formData.due_days_type}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, due_days_type: value })
+                }
+              >
+                <SelectTrigger id="due_days_type">
+                  <SelectValue placeholder="Select due days type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fixed_days">
+                    Fixed Number of Days
+                  </SelectItem>
+                  <SelectItem value="end_of_month">
+                    End of the billed month
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {formData.due_days_type === "fixed_days"
+                  ? "Invoice due date will be issue date + specified days"
+                  : "Invoice due date will always be the last day of the month"}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="due_days">
+                {formData.due_days_type === "fixed_days"
+                  ? "Due days to pay"
+                  : "Days before end of the billed month"}
+              </Label>
               <Input
                 id="due_days"
                 type="number"
                 min="0"
                 step="1"
                 value={formData.due_days}
-                onChange={(e) => setFormData({ ...formData, due_days: e.target.value })}
-                placeholder="30"
+                onChange={(e) =>
+                  setFormData({ ...formData, due_days: e.target.value })
+                }
+                placeholder={
+                  formData.due_days_type === "fixed_days" ? "30" : "0"
+                }
+                disabled={formData.due_days_type === "end_of_month"}
               />
+              {formData.due_days_type === "end_of_month" && (
+                <p className="text-xs text-muted-foreground">
+                  Automatically set to the last day of the month. Enter 0 for
+                  same month-end, 1 for next month-end, etc.
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="value_per_bird">Value per bird (₹)</Label>
-              <Input
-                id="value_per_bird"
-                type="number"
-                step="0.01"
-                value={formData.value_per_bird}
-                onChange={(e) => setFormData({ ...formData, value_per_bird: e.target.value })}
-                placeholder="e.g., 1.50 or -0.75"
-              />
-              <p className="text-xs text-muted-foreground">Positive adds charge per bird; negative applies discount.</p>
+              <div className="flex items-center gap-3">
+                <Label htmlFor="enable_per_bird">
+                  Enable Per-Bird Adjustment
+                </Label>
+                <Switch
+                  id="enable_per_bird"
+                  checked={formData.enable_per_bird}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, enable_per_bird: checked })
+                  }
+                />
+              </div>
             </div>
+
+            {formData.enable_per_bird && (
+              <div className="space-y-2">
+                <Label htmlFor="value_per_bird">Value per bird (₹)</Label>
+                <Input
+                  id="value_per_bird"
+                  type="number"
+                  step="0.01"
+                  value={formData.value_per_bird}
+                  onChange={(e) =>
+                    setFormData({ ...formData, value_per_bird: e.target.value })
+                  }
+                  placeholder="e.g., 1.50 or -0.75"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Positive adds charge per bird; negative applies discount.
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="country">Country</Label>
-              <Select value={formData.country} onValueChange={(value) => setFormData({ ...formData, country: value })}>
+              <Select
+                value={formData.country}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, country: value })
+                }
+              >
                 <SelectTrigger id="country">
                   <SelectValue placeholder="Select country" />
                 </SelectTrigger>
@@ -324,7 +419,9 @@ export function ClientForm({ client }: ClientFormProps) {
             <Input
               id="address"
               value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, address: e.target.value })
+              }
               placeholder="123 Main Street"
             />
           </div>
@@ -349,10 +446,12 @@ export function ClientForm({ client }: ClientFormProps) {
                   </div>
                 )}
               </div>
-              {fetchingPincode && <p className="text-xs text-blue-600 flex items-center gap-1">
-                <Spinner className="h-3 w-3" />
-                Fetching location...
-              </p>}
+              {fetchingPincode && (
+                <p className="text-xs text-blue-600 flex items-center gap-1">
+                  <Spinner className="h-3 w-3" />
+                  Fetching location...
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -360,7 +459,9 @@ export function ClientForm({ client }: ClientFormProps) {
               <Input
                 id="city"
                 value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, city: e.target.value })
+                }
                 placeholder="Mumbai"
               />
             </div>
@@ -370,7 +471,9 @@ export function ClientForm({ client }: ClientFormProps) {
               <Input
                 id="state"
                 value={formData.state}
-                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, state: e.target.value })
+                }
                 placeholder="Maharashtra"
               />
             </div>
@@ -381,14 +484,20 @@ export function ClientForm({ client }: ClientFormProps) {
             <Textarea
               id="notes"
               value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, notes: e.target.value })
+              }
               placeholder="Additional information about this client..."
               rows={4}
             />
           </div>
 
           <div className="flex gap-4 pt-4">
-            <Button type="submit" disabled={isLoading || fetchingPincode} className="min-w-32">
+            <Button
+              type="submit"
+              disabled={isLoading || fetchingPincode}
+              className="min-w-32"
+            >
               {isLoading ? (
                 <>
                   <Spinner className="mr-2" />
@@ -398,12 +507,17 @@ export function ClientForm({ client }: ClientFormProps) {
                 <>{client ? "Update Client" : "Create Client"}</>
               )}
             </Button>
-            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+              disabled={isLoading}
+            >
               Cancel
             </Button>
           </div>
         </form>
       </CardContent>
     </Card>
-  )
+  );
 }

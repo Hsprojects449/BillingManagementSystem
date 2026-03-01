@@ -1,46 +1,57 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MoreVertical, Send, CheckCircle, XCircle } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { useToast } from "@/hooks/use-toast"
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical, Send, CheckCircle, XCircle } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface InvoiceActionsProps {
-  invoiceId: string
-  currentStatus: string
+  invoiceId: string;
+  currentStatus: string;
 }
 
-export function InvoiceActions({ invoiceId, currentStatus }: InvoiceActionsProps) {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [isUpdating, setIsUpdating] = useState(false)
+export function InvoiceActions({
+  invoiceId,
+  currentStatus,
+}: InvoiceActionsProps) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const updateStatus = async (newStatus: string) => {
-    setIsUpdating(true)
-    const supabase = createClient()
+    setIsUpdating(true);
+    const supabase = createClient();
 
-    const { error } = await supabase.from("invoices").update({ status: newStatus }).eq("id", invoiceId)
+    const { error } = await supabase
+      .from("invoices")
+      .update({ status: newStatus })
+      .eq("id", invoiceId);
 
     if (error) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Failed to update invoice status",
-      })
+      });
     } else {
       toast({
         variant: "success",
         title: "Success",
         description: "Invoice status updated successfully.",
-      })
-      router.refresh()
+      });
+      router.refresh();
     }
 
-    setIsUpdating(false)
-  }
+    setIsUpdating(false);
+  };
 
   return (
     <DropdownMenu>
@@ -51,24 +62,27 @@ export function InvoiceActions({ invoiceId, currentStatus }: InvoiceActionsProps
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {currentStatus === "draft" && (
-          <DropdownMenuItem onClick={() => updateStatus("sent")}>
+          <DropdownMenuItem onClick={() => updateStatus("recorded")}>
             <Send className="h-4 w-4 mr-2" />
-            Mark as Sent
+            Mark as Recorded
           </DropdownMenuItem>
         )}
-        {(currentStatus === "sent" || currentStatus === "overdue") && (
+        {(currentStatus === "recorded" || currentStatus === "overdue") && (
           <DropdownMenuItem onClick={() => updateStatus("paid")}>
             <CheckCircle className="h-4 w-4 mr-2" />
             Mark as Paid
           </DropdownMenuItem>
         )}
         {currentStatus !== "cancelled" && (
-          <DropdownMenuItem onClick={() => updateStatus("cancelled")} className="text-red-600">
+          <DropdownMenuItem
+            onClick={() => updateStatus("cancelled")}
+            className="text-red-600"
+          >
             <XCircle className="h-4 w-4 mr-2" />
             Cancel Invoice
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }
