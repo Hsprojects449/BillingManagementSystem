@@ -130,6 +130,12 @@
     margin: 0;
   }
 
+  /* Make placeholder text lighter and more distinct from actual values */
+  input::placeholder,
+  textarea::placeholder {
+    opacity: 0.5;
+  }
+
   body {
     @apply bg-background text-foreground;
   }

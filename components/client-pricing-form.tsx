@@ -268,8 +268,8 @@ export function ClientPricingForm({
   const isProductRuleEdited = (productId: string, rule: ProductPricingRule) => {
     const initial = initialRulesByProduct[productId];
     if (!initial) {
-      // In create-mode / new products: consider it "edited" once user enables it.
-      return !!rule.enabled;
+      // In create-mode / new products: do not show as "edited" since we're creating, not editing.
+      return false;
     }
 
     const current = normalizeCurrentRuleForCompare(rule);

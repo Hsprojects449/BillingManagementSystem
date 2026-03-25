@@ -804,6 +804,15 @@ export function InvoiceForm({
     }
 
     try {
+      // Validate per-bird requirement: if per-bird is enabled, bird count must be provided
+      if (clientPerBirdEnabled && globalBirdCount <= 0) {
+        setError(
+          "Total birds is required when per-bird pricing is enabled. Please enter a bird count greater than 0."
+        );
+        setIsLoading(false);
+        return;
+      }
+
       // Get user's organization
       const { data: profile } = await supabase
         .from("profiles")
@@ -1362,11 +1371,14 @@ export function InvoiceForm({
             {clientPerBirdEnabled && (
               <div className="flex items-center gap-3">
                 <div className="flex-1">
-                  <Label className="text-sm">Total birds</Label>
+                  <Label className="text-sm">
+                    Total birds <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     type="number"
                     min="0"
                     step="1"
+                    required
                     value={globalBirdCount || ""}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -1377,7 +1389,7 @@ export function InvoiceForm({
                       }
                     }}
                     placeholder="Enter number of birds"
-                    className="w-36"
+                    className={`w-36 ${globalBirdCount <= 0 ? "border-red-300" : ""}`}
                   />
                 </div>
               </div>
@@ -1430,7 +1442,10 @@ export function InvoiceForm({
         <Button
           type="submit"
           disabled={
-            isLoading || !formData.client_id || !formData.invoice_number
+            isLoading ||
+            !formData.client_id ||
+            !formData.invoice_number ||
+            (clientPerBirdEnabled && globalBirdCount <= 0)
           }
         >
           {isLoading ? "Creating..." : "Create Invoice"}
